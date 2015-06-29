@@ -1,0 +1,4 @@
+data/original
+*.pyc
+*.jpg
+.DS_Store
