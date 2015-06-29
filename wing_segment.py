@@ -2,9 +2,9 @@ import numpy as np
 from skimage.graph import route_through_array
 import cv2
 
-def wing_segmentation(mask, wing_left=0.33, wing_right=0.66, crop=0.8):
+def wing_segmentation(mask, wing_left=0.33, wing_right=0.66, crop=0.8, distance_weight=0.5):
     mask_crop = np.copy(mask)
-    mask_crop[mask_crop == 0] = 128
+    mask_crop[mask_crop == 0] = distance_weight*255
     height, width = mask_crop.shape
 
     crop_left, crop_right = int(width * ((1 - crop) / 2)), int(width * ((1 + crop) / 2))
