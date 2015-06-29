@@ -1,4 +1,10 @@
 data/original
+data/full_image/*
+data/cropped_wing/*
+data/segmented_image/*
+debug/*
+output/*
 *.pyc
 *.jpg
+*.png
 .DS_Store

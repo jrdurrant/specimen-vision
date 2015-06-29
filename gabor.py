@@ -74,7 +74,7 @@ def test(category, num_images, output_folder):
     for index, image_path in enumerate(category.image_paths[-num_images:]):
         image_name = os.path.basename(image_path)
         image = cv2.resize(cv2.imread(image_path), (0,0), fy=0.1312, fx=0.1312)
-        mask = cv2.resize(cv2.imread(os.path.join('all_images_clean','mask',category.name,image_name)), image.shape[0:2][::-1])[:,:,0]
+        mask = cv2.resize(cv2.imread(os.path.join('data','segmented_image','mask',category.name,image_name)), image.shape[0:2][::-1])[:,:,0]
 
         num_boxes, image_boxes, scores = classify(image, mask, svm, win_height, win_width)
         

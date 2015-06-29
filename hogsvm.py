@@ -65,6 +65,6 @@ with tempfile.NamedTemporaryFile(suffix='.xml') as f:
 
 hog.setSVMDetector(sv)
 
-svm.save('svm.xml')
-hog.save('hog.xml')
-np.save('bias.npy', rho)
+svm.save('svm_data/svm.xml')
+hog.save('svm_data/hog.xml')
+np.save('svm_data/bias.npy', rho)

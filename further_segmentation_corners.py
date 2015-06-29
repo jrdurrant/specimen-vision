@@ -81,7 +81,7 @@ cv2.grabCut(img, mask, None, bgdModel, fgdModel, 10, cv2.GC_INIT_WITH_MASK)
 
 mask = np.where((mask==2)|(mask==0),0,1).astype('uint8')
 img_seg = img*mask[:,:,np.newaxis]
-cv2.imwrite('mask.png', mask*255)
+cv2.imwrite('debug/mask.png', mask*255)
 
 kernel = np.array([[ 1, 1, 1],
 				   [ 1, 0, 1],
@@ -90,8 +90,8 @@ connectivity = np.multiply(signal.convolve2d(mask.astype('float32'), kernel, bou
 connectivity2 = np.copy(connectivity)
 connectivity2[np.where(connectivity2 < 1)] = 0
 connectivity2[np.where(connectivity2 > (np.sum(kernel) - 1))] = 0
-cv2.imwrite('connected.png', connectivity*255/np.sum(kernel))
-cv2.imwrite('connected2.png', connectivity2*255)
+cv2.imwrite('debug/connected.png', connectivity*255/np.sum(kernel))
+cv2.imwrite('debug/connected2.png', connectivity2*255)
 
 ideal_sc = ideal_shape_context(target_angle=0.4*np.pi)
 
@@ -166,7 +166,7 @@ for i in range(0, num_corners):
 			current = next[:]
 			c += 1
 
-cv2.imwrite('corners.png',img_seg)
+cv2.imwrite('debug/corners.png',img_seg)
 # corner_kernel = np.ones((radius, radius))
 # usan = signal.convolve2d(connectivity/255, corner_kernel, boundary='fill', fillvalue=0, mode='same')
 # usan[np.where(usan < (radius**2 * (5.5/8.0)))] = 0

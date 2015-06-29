@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import os
 
-debug_folder = 'radial_debug'
+debug_folder = 'debug/radial/'
 
 def find_first_row(binary_image, smooth=False, smooth_size=11):
 	polar_w = binary_image.shape[1]

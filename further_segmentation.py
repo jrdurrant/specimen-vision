@@ -5,8 +5,8 @@ from scipy import signal
 from scipy.spatial.distance import euclidean
 import timeit
 
-img = cv2.imread('all_images_clean/segmented/female/BMNHE_1353164.JPG')
-seg = cv2.imread('all_images_clean/mask/female/BMNHE_1353164.JPG')
+img = cv2.imread('data/segmented_image/color/female/BMNHE_1353164.JPG')
+seg = cv2.imread('data/segmented_image/mask/female/BMNHE_1353164.JPG')
 
 h, w, _ = img.shape
 
@@ -21,7 +21,7 @@ mask[np.where(bg < 255)] = cv2.GC_BGD
 bgdModel = np.zeros((1,65),np.float64)
 fgdModel = np.zeros((1,65),np.float64)
 
-cv2.imwrite('boundaries.png', mask/cv2.GC_FGD)
+cv2.imwrite('debug/boundaries.png', mask/cv2.GC_FGD)
 
 cv2.grabCut(img, mask, None, bgdModel, fgdModel, 10, cv2.GC_INIT_WITH_MASK)
 
@@ -32,4 +32,4 @@ cv2.grabCut(img, mask, None, bgdModel, fgdModel, 10, cv2.GC_INIT_WITH_MASK)
 
 mask = np.where((mask==2)|(mask==0),0,1).astype('uint8')
 img_seg = img*mask[:,:,np.newaxis]
-cv2.imwrite('grabcut2.png', mask*255)
+cv2.imwrite('debug/grabcut2.png', mask*255)

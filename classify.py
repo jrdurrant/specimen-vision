@@ -49,14 +49,14 @@ class Sample:
 		return self.score == other.score
 
 hog = cv2.HOGDescriptor()
-hog.load('hog.xml')
-rho = np.load('bias.npy')[()] # weird syntax - converts 1x1 array to scalar (necessary for I/O)
+hog.load('svm_data/hog.xml')
+rho = np.load('svm_data/bias.npy')[()] # weird syntax - converts 1x1 array to scalar (necessary for I/O)
 
 win_height, win_width = hog.winSize
 image_width, image_height = (153,100)
 
 def test():
-	images_folder = 'all_images_clean/segmented/'
+	images_folder = 'data/segmented_image/colour/'
 	categories = [Category(category_name) for category_name in os.listdir(images_folder) if os.path.isdir(os.path.join(images_folder, category_name))]
 	for category in categories:
 		input_folder = images_folder + category.name + '/'
@@ -73,12 +73,12 @@ def test():
 
 
 # def retrain():
-images_folder = 'all_images_clean/cropped_wing/'
+images_folder = 'data/cropped_wing/'
 categories = [Category(category_name) for category_name in os.listdir(images_folder) if os.path.isdir(os.path.join(images_folder, category_name))][::-1]
 # categories = [Category('female')]
 for category in categories:
 	input_folder = images_folder + category.name + '/'
-	output_folder = 'classified/%s/' % category.name
+	output_folder = 'output/gender_classified/%s/' % category.name
 	for old_image_name in os.listdir(output_folder):
 		if os.path.splitext(old_image_name)[1] == '.JPG':
 			os.remove(output_folder + old_image_name)
@@ -86,7 +86,7 @@ for category in categories:
 	all_images = [re.match('[^A-Z]*(B[A-Z_]*[0-9]*).*', image_name).group(1) + '.JPG' for image_name in os.listdir(input_folder) if os.path.splitext(image_name)[1] == '.JPG']
 	images = []
 	[images.append(image) for image in all_images if image not in images]
-	input_folder = 'all_images_clean/segmented/' + category.name + '/'
+	input_folder = 'data/segmented_image/colour/' + category.name + '/'
 	num_images = len(images)
 	print num_images
 	scores = np.zeros((num_images))
@@ -121,10 +121,10 @@ for category in categories:
 ########################################################################################
 # Re train on incorrect results from negative incorrect samples
 female_category = next(category for category in categories if category.name == 'female')
-images_folder = 'all_images_clean/segmented/'
+images_folder = 'data/segmented_image/colour/'
 
 # TODO - REMOVE A SAMPLE FROM THE SAME IMAGE YOU ARE REPLACING WITH - IF POSSIBLE?
-output_folder = 'all_images_clean/cropped_wing/female/'
+output_folder = 'data/cropped_wing/female/'
 number_to_delete = len(female_category.incorrect_samples)
 for old_image_name in os.listdir(output_folder):
 		if number_to_delete > 0 and os.path.splitext(old_image_name)[1] == '.JPG':
@@ -140,7 +140,7 @@ for index, incorrect_sample in enumerate(incorrect_samples_sorted):
 	image_name = m.group(1) + '.JPG'
 	image = cv2.resize(cv2.imread(images_folder + 'female/' + image_name), (image_width, image_height))
 	cropped_image = image[incorrect_sample.crop[0]:incorrect_sample.crop[2], incorrect_sample.crop[1]:incorrect_sample.crop[3], :]
-	cv2.imwrite(('all_images_clean/cropped_wing/female/%d_' % index) + image_name, cropped_image)
+	cv2.imwrite(('data/cropped_wing/female/%d_' % index) + image_name, cropped_image)
 
 # if __name__ == "__main__":
 # 	retrain()

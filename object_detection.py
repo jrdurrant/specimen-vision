@@ -53,5 +53,5 @@ def visualize_boxes(boxes, image, win_height, win_width, normalise=True):
 
 win_height = 48
 win_width = 48
-boxes = np.load('boxes.npy')
+boxes = np.load('svm_data/boxes.npy')
 nms_boxes = nms(boxes, win_height, win_width)

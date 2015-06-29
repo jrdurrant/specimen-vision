@@ -48,5 +48,5 @@ test_image = cv2.imread('male_test.jpg')[390:700,422:800,:]
 # hist = hog(test_image)
 hog_descriptor = cv2.HOGDescriptor()
 h = hog_descriptor.compute(test_image)
-cv2.imwrite('wing.jpg', test_image)
+cv2.imwrite('debug/wing.jpg', test_image)
 

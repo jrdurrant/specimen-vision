@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 test_image = cv2.imread('binary.png')
 edges = cv2.Canny(test_image, 128, 128)
-cv2.imwrite('edges.png', edges)
+cv2.imwrite('debug/edges.png', edges)
 
 intensity = cv2.cvtColor(test_image, cv2.cv.CV_BGR2HSV)
 intensity = np.mean(intensity[:,:,1:], axis=2)
@@ -49,5 +49,5 @@ plt.show()
 
 mask = np.where((markers==2)|(markers==0),0,1).astype('uint8')
 
-cv2.imwrite('extrema.jpg',color_img)
-cv2.imwrite('markers.jpg',markers*255)
+cv2.imwrite('debug/extrema.jpg',color_img)
+cv2.imwrite('debug/markers.jpg',markers*255)
