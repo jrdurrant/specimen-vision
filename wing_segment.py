@@ -2,36 +2,41 @@ import numpy as np
 from skimage.graph import route_through_array
 import cv2
 
-# image_original = cv2.imread('data/segmented_image/mask/male/BMNHE_1353167.JPG')[:,:,0]
-image_original = cv2.imread('debug/wing/mask_small.png')[:,:,0]
-image = np.copy(image_original)
-image[image == 0] = 128
-h0, w0 = image.shape[:2]
+def wing_segmentation(mask, wing_left=0.33, wing_right=0.66, crop=0.8):
+    mask_crop = np.copy(mask)
+    mask_crop[mask_crop == 0] = 128
+    height, width = mask_crop.shape
 
-image = image[:,(w0/10):(-w0/10)]
-h, w = image.shape[:2]
+    crop_left, crop_right = int(width * ((1 - crop) / 2)), int(width * ((1 + crop) / 2))
 
-indices, weight = route_through_array(image, (0, -w0/10 + (1*w0)/3), (-1, (1*w)/3))
-indices = np.array(indices).T
-path = np.zeros_like(image)
-path[indices[0], indices[1]] = 255
+    mask_crop = mask_crop[:, crop_left:crop_right]
+    crop_width = crop_right - crop_left + 1
 
-indices, weight = route_through_array(image, (0, -w0/10 + (2*w0)/3), (-1, (2*w)/3))
-indices = np.array(indices).T
-path[indices[0], indices[1]] = 255
+    wing_left = int(width*wing_left - crop_left)
+    indices_left, weight = route_through_array(mask_crop, (0, wing_left), (-1, wing_left))
+    indices_left = np.array(indices_left).T
+    path_crop = np.zeros_like(mask_crop)
+    path_crop[indices_left[0], indices_left[1]] = 255
 
-path2 = np.zeros((h0+2,w0+2), dtype='uint8')
-path2[1:-1,(w0/10 + 1):(w0/10 + 1 + w)] = path
+    wing_right = int(width*wing_right - crop_right)
+    indices_right, weight = route_through_array(mask_crop, (0, wing_right), (-1, wing_right))
+    indices_right = np.array(indices_right).T
+    path_crop[indices_right[0], indices_right[1]] = 255
 
-image2 = np.zeros_like(image_original)
+    path = np.zeros((height + 2, width + 2), dtype='uint8')
+    path[1:-1, (crop_left + 1):(crop_right + 1)] = path_crop
 
-cv2.floodFill(image2, path2, (0, 0), 255)
-cv2.floodFill(image2, path2, (w - 1, h - 1), 255)
+    path_fill = np.zeros_like(mask)
 
-image3 = np.copy(image2)
-image3[image3 > 0] = 1
-image3 = image3 * image_original
+    cv2.floodFill(path_fill, path, (0, 0), 255)
+    cv2.floodFill(path_fill, path, (crop_width - 1, height - 1), 255)
 
-# output = np.dstack((image3[:, :, np.newaxis], path[:, :, np.newaxis], np.zeros((h, w, 1)))).astype('uint8')
+    wing_mask = np.copy(path_fill)
+    wing_mask[wing_mask > 0] = 1
+    wing_mask = wing_mask * mask
 
-cv2.imshow('out',image3)
+    return wing_mask, (0, crop_left + np.max(indices_left[1])), (np.max(indices_right[1]), width)
+
+if __name__ == '__main__':
+    mask = cv2.imread('debug/wing/mask_small.png')[:,:,0]
+    mask2, left_wing, right_wing = wing_segmentation(mask)
