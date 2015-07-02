@@ -1,13 +1,7 @@
 import numpy as np
 import cv2
-import matplotlib.pyplot as plt
 import os
-
-def remove_ruler(image):
-	green = image[:, :, 1]
-	plt.hist(np.ravel(green[-1000:, :]))
-	plt.show()
-	return image
+from folder import apply_all_files
 
 def segment_butterfly(image, border=10):
 	hsv_image = cv2.cvtColor(image, cv2.cv.CV_BGR2HSV)
@@ -25,15 +19,15 @@ def segment_butterfly(image, border=10):
 	top -= border
 	width += border*2
 	height += border*2
-	return mask[top:(top + height), left:(left + width)], image[top:(top + height), left:(left + width)]
+	return mask[top:(top + height), left:(left + width)],
+		   image[top:(top + height), left:(left + width)]
+
+def segment_file(file_in, folder_out):
+	image = cv2.imread(file_in)
+	segmented_image = segment_butterfly(image)
+	cv2.imwrite(os.path.join(folder_out, os.path.basename(file_in)), segmented_image[0])
 
 if __name__ == "__main__":
-	image_folder = 'all_images_clean/full/male/'
-	output_folder = 'all_images_clean/mask/male/'
-	images = (image_name for image_name in os.listdir(image_folder) if os.path.splitext(image_name)[1] == '.JPG')
-	for image_name in images:
-		test_image = cv2.imread(image_folder + image_name)
-		# test_image = cv2.resize(test_image, (206,135))
-		segmented_image = segment_butterfly(test_image)
-		cv2.imwrite(output_folder+ image_name, segmented_image[0])
-		# cv2.imwrite('segmented_small_border/mask_' + image_name, segmented_image[0])
+	apply_all_files(input_folder='data/full_image/male/',
+				    output_folder='debug/segment/',
+				    function=segment_file)
