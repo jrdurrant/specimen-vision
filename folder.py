@@ -1,6 +1,6 @@
 import os
 
-def apply_all_files(input_folder, function, output_folder=None):
+def apply_all_images(input_folder, function, output_folder=None):
 	images = [image_file
 			  for image_file
 			  in os.listdir(input_folder)
