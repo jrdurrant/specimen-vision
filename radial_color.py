@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 import os
+from wing_segment import wing_segmentation
 
 debug_folder = 'debug/radial/'
 
@@ -82,22 +83,27 @@ def wing_limits(binary_image, origin):
 	H = np.histogram((wing_angle[np.where(binary_image > 0)]).ravel(), 10000)
 	H_size = np.cumsum(H[0]*1.0/np.sum(H[0]))
 
-	angle_start = H[1][np.where(H_size > 0.2)[0][0]]
-	angle_end = H[1][np.where(H_size > 0.9)[0][0]]
+	angle_start = H[1][np.where(H_size > 0.02)[0][0]]
+	angle_end = H[1][np.where(H_size > 0.92)[0][0]]
 
 	H = np.histogram((wing_dist[np.where(binary_image > 0)]).ravel(), 10000)
 	H_size = np.cumsum(H[0]*1.0/np.sum(H[0]))
 
-	dist_start = H[1][np.where(H_size > 0.1)[0][0]]
+	dist_start = H[1][np.where(H_size > 0.05)[0][0]]
 	dist_end = np.max(H[1])
 	return (angle_start, angle_end), (dist_end, dist_start)
 
 
 if __name__ == '__main__':
-	image_name = 'BMNHE_1354026.JPG'
+	image_name = 'BMNHE_1354027.JPG'
 
 	image = cv2.imread(os.path.join('data', 'segmented_image', 'color', 'male', image_name))
-	mask = cv2.imread(os.path.join('data', 'segmented_image', 'mask', 'male', image_name))[:, :, 0]/255.0
+	mask = cv2.imread(os.path.join('data', 'segmented_image', 'mask', 'male', image_name))[:, :, 0]
+
+	mask2, left_wing, right_wing = wing_segmentation(mask)
+	mask2 = mask2 / 255.0
+
+	mask = mask / 255.0
 
 	cv2.imwrite(os.path.join(debug_folder,'color.png'), image)
 	cv2.imwrite(os.path.join(debug_folder,'mask.png'), mask*255)
@@ -107,14 +113,18 @@ if __name__ == '__main__':
 	polar_h, polar_w = 800, 2000
 
 	y, x = centre_of_mass(mask)
+	y = 672.0
+	x = 1332.0
 	print('Centre of mass at ({:.2f}, {:.2f})'.format(y, x))
 
-	angle_range, distance_range = wing_limits(mask, (y, x))
 
-	cv2.imwrite(os.path.join(debug_folder,'color_mask.png'), np.tile(mask[:,:,np.newaxis], (1,1,3))*image)
+	angle_range, distance_range = wing_limits(mask2, (y, x))
+
+	cv2.imwrite(os.path.join(debug_folder,'color_mask.png'), np.tile(mask2[:,:,np.newaxis], (1,1,3))*image)
+	cv2.imwrite(os.path.join(debug_folder,'wing_mask.png'), 255*mask2[:,:,np.newaxis])
 
 	image_polar = polar_transformation(image, (y, x), (polar_h, polar_w), distance_range, angle_range)
-	mask_polar = polar_transformation(mask, (y, x), (polar_h, polar_w), distance_range, angle_range)
+	mask_polar = polar_transformation(mask2, (y, x), (polar_h, polar_w), distance_range, angle_range)
 	cv2.imwrite(os.path.join(debug_folder,'color_polar.png'),image_polar)
 	cv2.imwrite(os.path.join(debug_folder,'mask_polar.png'),mask_polar*255)
 
