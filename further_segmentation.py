@@ -2,8 +2,8 @@ import numpy as np
 import cv2
 
 # hack to account for drawContours function not appearing to fill the contour
-def fillContour(image, contour):
-	cv2.drawContours(image, contour, contourIdx=-1, color=255, lineType=8, thickness=cv2.cv.CV_FILLED)
+def fillContours(image, contours):
+	cv2.drawContours(image, contours, contourIdx=-1, color=255, lineType=8, thickness=cv2.cv.CV_FILLED)
 
 	h, w = image.shape
 	outline = np.zeros((h + 2, w + 2), dtype='uint8')
@@ -13,19 +13,19 @@ def fillContour(image, contour):
 	cv2.floodFill(image, outline, (0, 0), newVal=0)
 	return image
 
-def largest_component(binary_image):
+def largest_components(binary_image, n):
 	contours, hierarchy = cv2.findContours(binary_image.astype('uint8'), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
-	contour = sorted(contours, key=lambda contour: cv2.contourArea(contour), reverse=True)[0]
-	return fillContour(np.zeros_like(binary_image), contour)
+	contours = sorted(contours, key=lambda contour: cv2.contourArea(contour), reverse=True)[:n]
+	return fillContours(np.zeros_like(binary_image), contours)
 
-def segment_component(image, mask):
+def segment_components(image, mask, n=1):
 	h, w, _ = image.shape
 
 	kernel = np.ones((h/100,h/100),np.uint8)
 	foreground = cv2.erode(seg, kernel, iterations=1)[:,:,0]
 
-	foreground = largest_component(foreground)
+	foreground = largest_components(foreground, n)
 
 	background = cv2.dilate(seg, kernel, iterations=1)[:,:,0]
 
@@ -48,4 +48,6 @@ if __name__ == '__main__':
 	img = cv2.imread('debug/radial/color.png')
 	seg = cv2.imread('debug/radial/wing_mask.png')
 
-	segmented_image, segmented_mask = segment_componentimg, seg)[0:2]
+	segmented_image, segmented_mask = segment_components(img, seg)[0:2]
+	cv2.imwrite('debug/radial/segmented_color.png', segmented_image)
+	cv2.imwrite('debug/radial/segmented_mask.png', segmented_mask)
