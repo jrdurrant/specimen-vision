@@ -30,10 +30,9 @@ def largest_components(binary_image, num_components=1, output_bounding_box=False
 
 def grabcut_components(image, mask, num_components=1):
     h, w, _ = image.shape
-
     kernel = np.ones((h / 100, h / 100), np.uint8)
-    foreground = cv2.erode(mask, kernel, iterations=1)
 
+    foreground = cv2.erode(mask, kernel, iterations=1)
     foreground = largest_components(foreground, num_components)
 
     background = cv2.dilate(mask, kernel, iterations=1)
@@ -102,7 +101,7 @@ def shortest_path(costs, start, end):
     
     return indices[:, 0], indices[:, 1]
 
-def make_cut(costs, start, end):
+def make_cut(costs, start, end, seed_point):
     cut_y, cut_x = shortest_path(costs, start, end)
 
     path_crop = np.zeros_like(costs)
@@ -110,13 +109,8 @@ def make_cut(costs, start, end):
 
     path = np.pad(path_crop, (1, 1), mode='constant', constant_values=(0, 0))
 
-    seed_point = tuple(np.argwhere(path[:, 0:1] == 0)[0])
     mask = np.zeros_like(costs)
     cv2.floodFill(mask, path, seed_point, 1)
-
-    # make sure that the largest side of the cut is filled in
-    if np.mean(mask) < 0.5:
-        mask = 1 - mask
 
     return mask, path
 
@@ -132,13 +126,19 @@ def segment_wing(mask, wing_left=0.4, wing_right=0.6, crop=0.3):
 
     mean_x = int(mean_x)
 
-    left_wing_mask = make_cut(costs=mask[:, crop_width:mean_x],
-                              start=(0, wing_left - crop_width),
-                              end=(height - 1, mean_x - 1 - crop_width))
+    left_wing_mask, path = make_cut(costs=mask[:, crop_width:mean_x],
+                                    start=(0, wing_left - crop_width),
+                                    end=(height - 1, mean_x - 1 - crop_width),
+                                    seed_point=(0, height - 1))
 
-    right_wing_mask = make_cut(costs=mask[:, mean_x : -crop_width],
-                               start=(0, wing_right - mean_x),
-                               end=(height - 1, 0))
+    cv2.imwrite('left_path.png', path)
+
+    right_wing_mask, path = make_cut(costs=mask[:, mean_x : -crop_width],
+                                     start=(0, wing_right - mean_x),
+                                     end=(height - 1, 0),
+                                     seed_point=(width - mean_x - crop_width - 1, height - 1))
+
+    cv2.imwrite('right_path.png', path)
 
     wing_mask = np.hstack((left_wing_mask,right_wing_mask))
     wing_mask = mask * np.pad(wing_mask, 
