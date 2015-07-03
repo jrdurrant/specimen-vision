@@ -36,50 +36,49 @@ def shortest_path(costs, start, end):
     
     return indices[:, 0], indices[:, 1]
 
-def wing_segmentation(mask, wing_left=0.4, wing_right=0.6, crop=0.8, distance_weight=0.5):
-    mask_crop = np.copy(mask)
-    height, width = mask_crop.shape
+def make_cut(costs, start, end):
+    cut_y, cut_x = shortest_path(costs, start, end)
 
-    crop_left = int(width * ((1 - crop) / 2))
-    crop_right = int(width * ((1 + crop) / 2))
+    path_crop = np.zeros_like(costs)
+    path_crop[cut_y, cut_x] = 255
 
-    wing_left = int(width*wing_left - crop_left)
-    wing_right = int(width*wing_right - crop_left)
+    path = np.pad(path_crop, (1, 1), mode='constant', constant_values=(0, 0))
+
+    seed_point = tuple(np.argwhere(path[:, 0:1] == 0)[0])
+    print seed_point
+    mask = np.zeros_like(costs)
+    cv2.floodFill(mask, path, seed_point, 1)
+
+    # make sure that the largest side of the cut is filled in
+    if np.mean(mask) < 0.5:
+        mask = 1 - mask
+
+    return mask
+
+def wing_segmentation(mask, wing_left=0.4, wing_right=0.6):
+    height, width = mask.shape
+
+    wing_left = int(width*wing_left)
+    wing_right = int(width*wing_right)
 
     mean_y, mean_x = centre_of_mass(mask)
-    mean_x = int(mean_x - crop_left)
 
-    mask_crop = mask_crop[:, crop_left:crop_right]
-    crop_width = crop_right - crop_left + 1
+    mean_x = int(mean_x)
 
-    left_cut_y, left_cut_x = shortest_path(costs=mask_crop[:, :mean_x],
-                                           start=(0, wing_left),
-                                           end=(height - 1, mean_x - 1))
+    left_wing_mask = make_cut(costs=mask[:, :mean_x],
+                              start=(0, wing_left),
+                              end=(height - 1, mean_x - 1))
 
-    path_crop = np.zeros_like(mask_crop)
-    path_crop[left_cut_y, left_cut_x] = 255
+    right_wing_mask = make_cut(costs=mask[:, mean_x:],
+                               start=(0, wing_right - mean_x),
+                               end=(height - 1, 0))
 
-    right_cut_y, right_cut_x = shortest_path(costs=mask_crop[:, mean_x:],
-                                             start=(0, wing_right - mean_x),
-                                             end=(height - 1, 0))
+    wing_mask = np.hstack((left_wing_mask, right_wing_mask)) * mask
+    wing_mask = segmentation.largest_components(wing_mask, 
+                                                num_components=2, 
+                                                output_bounding_box=False)
 
-    path_crop[right_cut_y, right_cut_x + mean_x] = 255
-
-    path = np.zeros((height + 2, width + 2), dtype='uint8')
-    path[1:-1, (crop_left + 1):(crop_right + 1)] = path_crop
-
-    path_fill = np.zeros_like(mask)
-
-    cv2.floodFill(path_fill, path, (0, 0), 255)
-    cv2.floodFill(path_fill, path, (crop_width - 1, height - 1), 255)
-
-    wing_mask = np.copy(path_fill)
-    wing_mask[wing_mask > 0] = 1
-    wing_mask = wing_mask * mask
-
-    wing_mask = segmentation.largest_components(wing_mask, num_components=2, output_bounding_box=False)
-
-    return wing_mask, (0, crop_left + np.max(left_cut_x)), (np.min(right_cut_x), width), path
+    return wing_mask
 
 if __name__ == '__main__':
     with Timer():
@@ -88,6 +87,5 @@ if __name__ == '__main__':
         segmented_image, mask = segmentation.segment_butterfly(image, approximate=False)
         cv2.imwrite('debug/wing/color.png', segmented_image)
         cv2.imwrite('debug/wing/segmented.png', mask*255)
-        mask2, left_wing, right_wing, path = wing_segmentation(mask)
+        mask2 = wing_segmentation(mask)
         cv2.imwrite('debug/wing/wing_mask.png', mask2)
-        cv2.imwrite('debug/wing/path.png', path)
