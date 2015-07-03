@@ -53,7 +53,7 @@ def grabcut_components(image, mask, num_components=1):
     mask_holes_removed = largest_components(mask, 
                                             num_components=1, 
                                             output_bounding_box=False)
-    segmented_image = image * (mask[:, :, np.newaxis])
+    segmented_image = image * (mask_holes_removed[:, :, np.newaxis] / 255)
     return segmented_image, mask_holes_removed * 255
 
 def segment_butterfly(image, sat_threshold=100, approximate=True, border=10):
@@ -148,17 +148,28 @@ def segment_wing(mask, wing_left=0.4, wing_right=0.6, crop=0.3):
 
     return wing_mask
 
-def segment_image_file(file_in, folder_out, mode='wings'):
+def segment_image_file(file_in, folder_out):
     image = cv2.imread(file_in)
-    image = cv2.resize(image, (0,0), fx=0.4, fy=0.4)
     segmented_image, segmented_mask = segment_butterfly(image, 
                                                         sat_threshold=64,
                                                         approximate=False)
-    if mode == 'wings':
-        segmented_mask = segment_wing(segmented_mask) / 255
 
-    file_out = os.path.join(folder_out, os.path.basename(file_in))
+    filename = os.path.basename(file_in)
+
+    file_out = os.path.join(folder_out, 'color_' + filename)
+    cv2.imwrite(file_out, segmented_image)
+
+    file_out = os.path.join(folder_out, 'full_' + filename)
     cv2.imwrite(file_out, 255*segmented_mask)
+
+    wing_mask = segment_wing(segmented_mask) / 255
+    file_out = os.path.join(folder_out, 'wings_' + filename)
+    cv2.imwrite(file_out, 255*wing_mask)
+
+    body = np.greater(segmented_mask, wing_mask).astype('uint8')
+    body = largest_components(body*255, num_components=1) / 255
+    file_out = os.path.join(folder_out, 'abdomen_' + filename)
+    cv2.imwrite(file_out, 255*body)
 
 if __name__ == "__main__":
     apply_all_images(input_folder='data/moths/',
