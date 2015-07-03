@@ -85,9 +85,9 @@ if __name__ == '__main__':
     with Timer():
         image = cv2.imread('data/full_image/male/BMNHE_1355281.JPG')
         image = cv2.resize(image, (0, 0), fy=0.4, fx=0.4)
-        mask, segmented_image = segmentation.segment_butterfly(image, approximate=False)
+        segmented_image, mask = segmentation.segment_butterfly(image, approximate=False)
         cv2.imwrite('debug/wing/color.png', segmented_image)
-        cv2.imwrite('debug/wing/segmented.png', mask)
+        cv2.imwrite('debug/wing/segmented.png', mask*255)
         mask2, left_wing, right_wing, path = wing_segmentation(mask)
         cv2.imwrite('debug/wing/wing_mask.png', mask2)
         cv2.imwrite('debug/wing/path.png', path)
