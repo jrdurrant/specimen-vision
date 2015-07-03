@@ -54,9 +54,9 @@ def grabcut_components(image, mask, num_components=1):
 	segmented_image = image * (mask[:, :, np.newaxis])
 	return segmented_image, mask_holes_removed * 255
 
-def segment_butterfly(image, approximate=True, border=10):
+def segment_butterfly(image, sat_threshold=100, approximate=True, border=10):
 	hsv_image = cv2.cvtColor(image, cv2.cv.CV_BGR2HSV)
-	mask = 255 * np.greater(hsv_image[:, :, 1], 100).astype('uint8')
+	mask = 255 * np.greater(hsv_image[:, :, 1], sat_threshold).astype('uint8')
 
 	butterfly_component, bounding_rect = largest_components(mask, num_components=1, output_bounding_box=True)
 	left, top, width, height = bounding_rect
@@ -77,7 +77,7 @@ def segment_image_file(file_in, folder_out):
 	segmented_image = segment_butterfly(image, approximate=False)
 
 	file_out = os.path.join(folder_out, os.path.basename(file_in))
-	cv2.imwrite(file_out, segmented_image[1])
+	cv2.imwrite(file_out, 255*segmented_image[1])
 
 if __name__ == "__main__":
 	apply_all_images(input_folder='data/full_image/male/',
