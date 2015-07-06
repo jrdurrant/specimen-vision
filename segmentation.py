@@ -157,18 +157,18 @@ def segment_image_file(file_in, folder_out):
     filename = os.path.basename(file_in)
 
     file_out = os.path.join(folder_out, 'color_' + filename)
+    file_out = os.path.splitext(file_out)[0] + '.png'
     cv2.imwrite(file_out, segmented_image)
-
-    file_out = os.path.join(folder_out, 'full_' + filename)
-    cv2.imwrite(file_out, 255*segmented_mask)
 
     wing_mask = segment_wing(segmented_mask) / 255
     file_out = os.path.join(folder_out, 'wings_' + filename)
+    file_out = os.path.splitext(file_out)[0] + '.png'
     cv2.imwrite(file_out, 255*wing_mask)
 
     body = np.greater(segmented_mask, wing_mask).astype('uint8')
     body = largest_components(body*255, num_components=1) / 255
     file_out = os.path.join(folder_out, 'abdomen_' + filename)
+    file_out = os.path.splitext(file_out)[0] + '.png'
     cv2.imwrite(file_out, 255*body)
 
 if __name__ == "__main__":
