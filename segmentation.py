@@ -44,21 +44,21 @@ def grabcut_components(image, mask, num_components=1):
     backgroundModel = np.zeros((1, 65), np.float64)
     foregroundModel = np.zeros((1, 65), np.float64)
 
-    cv2.grabCut(image, mask, rect=None, bgdModel=backgroundModel,
-                fgdModel=foregroundModel, iterCount=10,
-                mode=cv2.GC_INIT_WITH_MASK)
+    cv2.grabCut(image, mask, rect=None, bgdModel=backgroundModel, fgdModel=foregroundModel, iterCount=10, mode=cv2.GC_INIT_WITH_MASK)
 
     mask = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8')
 
     mask_holes_removed = largest_components(mask, 
                                             num_components=1, 
                                             output_bounding_box=False)
+
     segmented_image = image * (mask_holes_removed[:, :, np.newaxis] / 255)
     return segmented_image, mask_holes_removed * 255
 
-def segment_butterfly(image, sat_threshold=100, approximate=True, border=10):
+def segment_butterfly(image, saliency_threshold=100, approximate=True, border=10):
     hsv_image = cv2.cvtColor(image, cv2.cv.CV_BGR2HSV)
-    mask = 255 * np.greater(hsv_image[:, :, 1], sat_threshold).astype('uint8')
+    saliency = 0.25 * hsv_image[:, :, 2] + 0.75 * hsv_image[:, :, 1]
+    mask = 255 * np.greater(saliency, saliency_threshold).astype('uint8')
 
     component, bounding_rect = largest_components(mask, 
                                                   num_components=1,
@@ -150,7 +150,7 @@ def segment_wing(mask, wing_left=0.4, wing_right=0.6, crop=0.3):
 def segment_image_file(file_in, folder_out):
     image = cv2.imread(file_in)
     segmented_image, segmented_mask = segment_butterfly(image, 
-                                                        sat_threshold=64,
+                                                        saliency_threshold=64,
                                                         approximate=False)
 
     filename = os.path.basename(file_in)
