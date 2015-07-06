@@ -5,6 +5,7 @@ from scipy.cluster.vq import kmeans2, ClusterError
 from collections import namedtuple
 
 Color = namedtuple('Color', ('RGB', 'proportion'))
+Segment = namedtuple('Segment', ('name', 'mask'))
 
 def dominant_colors(image, num_colors, mask=None):
     image = cv2.cvtColor(image / 255.0, cv2.cv.CV_BGR2Lab)
@@ -27,25 +28,7 @@ def dominant_colors(image, num_colors, mask=None):
 
     return colors
 
-if __name__ == '__main__':
-    input_folder = 'data/moths_wings/'
-    filename = 'Basiothia_charis_f_MCB002_48.5_r.jpg'
-
-    abdomen = cv2.imread(os.path.join(input_folder, 'abdomen_' + filename))
-    color = cv2.imread(os.path.join(input_folder, 'color_' + filename))
-    left_wing_front = cv2.imread(os.path.join(input_folder, 'left_wing_front_' + filename))
-    left_wing_back = cv2.imread(os.path.join(input_folder, 'left_wing_back_' + filename))
-    right_wing_front = cv2.imread(os.path.join(input_folder, 'right_wing_front_' + filename))
-    right_wing_back = cv2.imread(os.path.join(input_folder, 'right_wing_back_' + filename))
-
-    colors = np.concatenate((color, color), axis=0)
-    mask = np.concatenate((left_wing_front, right_wing_front), axis=0)[:, :, 0]
-
-    num_colors = 5
-
-    dc = dominant_colors(colors.astype('float32'), num_colors, mask=mask)
-
-    output_width = 100 * num_colors
+def visualise_colors(colors, output_width, output_height):
     output = np.zeros((100, output_width, 3), dtype='float32')
     left = 0
     for color in dc:
@@ -53,4 +36,33 @@ if __name__ == '__main__':
         output[:, left:right, :] = color.RGB
         left = right
 
-    cv2.imwrite('colors.png', output)
+    output[:, right:output_width, :] = colors[-1].RGB
+
+    return output
+
+if __name__ == '__main__':
+    input_folder = 'data/moths_wings/'
+    output_folder = 'data/moths_colors/'
+    filename = 'Basiothia_charis_f_MCB002_48.5_r.png'
+    num_colors = 5
+
+    images = [image_file[6:]
+              for image_file
+              in os.listdir(input_folder)
+              if image_file.startswith('color_')]
+
+    for filename in images:
+        color = cv2.imread(os.path.join(input_folder, 'color_' + filename))
+        abdomen = cv2.imread(os.path.join(input_folder, 'abdomen_' + filename))[:, :, 0]
+        forewings = cv2.imread(os.path.join(input_folder, 'forewings_' + filename))[:, :, 0]
+        hindwings = cv2.imread(os.path.join(input_folder, 'hindwings_' + filename))[:, :, 0]
+
+        segments = [Segment('abdomen', abdomen),
+                    Segment('forewings', forewings),
+                    Segment('hindwings', hindwings)]
+
+        for segment in segments:
+            dc = dominant_colors(color.astype('float32'), num_colors, mask=segment.mask)
+
+            output = visualise_colors(dc, 100 * num_colors, 100)
+            cv2.imwrite(os.path.join(output_folder,'{}_{}'.format(segment.name, filename)), output)
