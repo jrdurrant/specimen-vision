@@ -6,8 +6,7 @@ from folder import apply_all_images
 
 # hack to account for drawContours function not appearing to fill the contour
 def fillContours(image, contours):
-    cv2.drawContours(image, contours, contourIdx=-1, color=255,
-                     lineType=8, thickness=cv2.cv.CV_FILLED)
+    cv2.drawContours(image, contours, contourIdx=-1, color=255, lineType=8, thickness=cv2.cv.CV_FILLED)
 
     h, w = image.shape
     outline = np.zeros((h + 2, w + 2), dtype='uint8')
@@ -30,7 +29,8 @@ def largest_components(binary_image, num_components=1, output_bounding_box=False
 
 def grabcut_components(image, mask, num_components=1):
     h, w, _ = image.shape
-    kernel = np.ones((h / 100, h / 100), np.uint8)
+    kernel_size = h / 100
+    kernel = np.ones((kernel_size, kernel_size), np.uint8)
 
     foreground = cv2.erode(mask, kernel, iterations=1)
     foreground = largest_components(foreground, num_components)
@@ -82,8 +82,8 @@ def centre_of_mass(binary_image):
 
     binary_image[np.where(binary_image > 0)] = 1
 
-    x = np.mean((binary_image*xv)[np.where(binary_image > 0)])
-    y = np.mean((binary_image*yv)[np.where(binary_image > 0)])
+    x = np.mean((binary_image * xv)[np.where(binary_image > 0)])
+    y = np.mean((binary_image * yv)[np.where(binary_image > 0)])
 
     return y, x
 
@@ -96,8 +96,7 @@ def shortest_path(costs, start, end):
     indices[0, :] = end
     for row in range(1, height):
         y, x = indices[row - 1, :]
-        indices[row, 0] = indices[row - 1, 0] - offsets[traceback[y, x]][0]
-        indices[row, 1] = indices[row - 1, 1] - offsets[traceback[y, x]][1]
+        indices[row, :] = indices[row - 1, :] - offsets[traceback[y, x]]
     
     return indices[:, 0], indices[:, 1]
 
