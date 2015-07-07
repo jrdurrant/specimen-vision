@@ -3,8 +3,8 @@ import numpy as np
 import os
 import glob
 import timeit
-from collections import namedtuple
 from object_detection import Box, visualize_boxes, nms
+from itertools import product
 
 class Category:
     def __init__(self, name, label, image_paths=[]):
@@ -14,12 +14,11 @@ class Category:
         self.num_samples = len(image_paths)
 
 def gabor_kernels(num_orientations, sigma_vals=(1,3), lamd_vals=(9,11), ksize=15, gamma=0.5, psi=0, ktype=cv2.CV_32F):
-    kernels = []
-    for theta in np.arange(0, np.pi, np.pi / num_orientations):
-        for sigma in sigma_vals:
-            for lambd in lamd_vals:
-                kernel = cv2.getGaborKernel((ksize, ksize), sigma, theta, lambd, gamma, psi, ktype)
-                kernels.append(kernel)
+    theta_vals = np.linspace(0, np.pi, num_orientations)
+
+    kernels = [cv2.getGaborKernel((ksize, ksize), sigma, theta, lambd, gamma, psi, ktype)
+               for theta, sigma, lambd in product(theta_vals, sigma_vals, lamd_vals)]
+
     return kernels
 
 def gabor_features(image, mask=None):
@@ -80,10 +79,9 @@ def test(category, num_images, output_folder):
         
         predicted_class = 'male' if num_boxes > 0 else 'female'
 
-        print index
-        # print scores
-        # print('Expected class: {}'.format(category.name))
-        # print('Predicted class: {} [{} box{} detected]\n'.format(predicted_class, num_boxes, 'es' if num_boxes != 1 else ''))
+        print('Sample {}:\n------------'.format(index))
+        print('Expected class: {}'.format(category.name))
+        print('Predicted class: {} [{} box{} detected]\n'.format(predicted_class, num_boxes, 'es' if num_boxes != 1 else ''))
 
         cv2.imwrite(os.path.join(output_folder, category.name, '{}_{}'.format(predicted_class, image_name)), image_boxes)
 
@@ -101,7 +99,7 @@ win_width = 48
 kernels = gabor_kernels(8)
 
 if __name__ == '__main__':
-    folders = ['all_images_clean/cropped_wing/female/', 'all_images_clean/cropped_wing/male/']
+    folders = ['data/cropped_wing/female/', 'data/cropped_wing/male/']
 
     categories = []
     for label, folder_path in enumerate(folders):
@@ -129,7 +127,7 @@ if __name__ == '__main__':
         scores[index, :] = [labels[index], svm.predict(features[index, :]), 1 - np.abs(scores[index, 0] - scores[index, 1])]
     print('Accuracy = {:.2%}\n'.format(np.mean(scores[:,2])))
 
-    folders = ['all_images_clean/segmented/female/', 'all_images_clean/segmented/male/']
+    folders = ['data/segmented/female/', 'data/segmented/male/']
 
     categories = []
     for label, folder_path in enumerate(folders):
