@@ -65,8 +65,8 @@ def segment_butterfly(image, saliency_threshold=100, approximate=True, border=10
                                                   output_bounding_box=True)
     left, top, width, height = bounding_rect
 
-    crop_left, crop_right = left - border, left + width + border
-    crop_top, crop_bottom = top - border, top + height + border
+    crop_left, crop_right = max(left - border, 0), min(left + width + border, width)
+    crop_top, crop_bottom = max(top - border, 0), min(top + height + border, height)
 
     mask = mask[crop_top:crop_bottom, crop_left:crop_right]
     image = image[crop_top:crop_bottom, crop_left:crop_right]
