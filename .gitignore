@@ -7,4 +7,5 @@ output/*
 *.pyc
 *.jpg
 *.png
+*.npy
 .DS_Store
