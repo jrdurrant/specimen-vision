@@ -57,6 +57,7 @@ def grabcut_components(image, mask, num_components=1):
 
 def segment_butterfly(image, saliency_threshold=100, approximate=True, border=10):
     hsv_image = cv2.cvtColor(image, cv2.cv.CV_BGR2HSV)
+    image_height, image_width = image.shape[:2]
     saliency = 0.25 * hsv_image[:, :, 2] + 0.75 * hsv_image[:, :, 1]
     mask = 255 * np.greater(saliency, saliency_threshold).astype('uint8')
 
@@ -65,8 +66,8 @@ def segment_butterfly(image, saliency_threshold=100, approximate=True, border=10
                                                   output_bounding_box=True)
     left, top, width, height = bounding_rect
 
-    crop_left, crop_right = max(left - border, 0), min(left + width + border, width)
-    crop_top, crop_bottom = max(top - border, 0), min(top + height + border, height)
+    crop_left, crop_right = max(left - border, 0), min(left + width + border, image_width)
+    crop_top, crop_bottom = max(top - border, 0), min(top + height + border, image_height)
 
     mask = mask[crop_top:crop_bottom, crop_left:crop_right]
     image = image[crop_top:crop_bottom, crop_left:crop_right]
@@ -158,6 +159,10 @@ def segment_image_file(file_in, folder_out):
     file_out = os.path.join(folder_out, 'color_' + filename)
     file_out = os.path.splitext(file_out)[0] + '.png'
     cv2.imwrite(file_out, segmented_image)
+
+    # file_out = os.path.join(folder_out, 'full_' + filename)
+    # file_out = os.path.splitext(file_out)[0] + '.png'
+    # cv2.imwrite(file_out, 255*segmented_mask)
 
     wing_mask = segment_wing(segmented_mask) / 255
     file_out = os.path.join(folder_out, 'wings_' + filename)
