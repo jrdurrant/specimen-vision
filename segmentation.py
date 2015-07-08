@@ -112,7 +112,7 @@ def make_cut(costs, start, end, seed_point):
     mask = np.zeros_like(costs)
     cv2.floodFill(mask, path, seed_point, 1)
 
-    return mask
+    return mask, path
 
 def segment_wing(mask, wing_left=0.4, wing_right=0.6, crop=0.3):
     height, width = mask.shape
@@ -126,15 +126,25 @@ def segment_wing(mask, wing_left=0.4, wing_right=0.6, crop=0.3):
 
     mean_x = int(mean_x)
 
-    left_wing_mask = make_cut(costs=mask[:, crop_width:mean_x],
-                              start=(0, wing_left - crop_width),
-                              end=(height - 1, mean_x - 1 - crop_width),
-                              seed_point=(0, height - 1))
+    left_wing_mask, left_wing_path = make_cut(costs=mask[:, crop_width:mean_x],
+                                              start=(0, wing_left - crop_width),
+                                              end=(height - 1, mean_x - 1 - crop_width),
+                                              seed_point=(0, height - 1))
 
-    right_wing_mask = make_cut(costs=mask[:, mean_x : -crop_width],
-                               start=(0, wing_right - mean_x),
-                               end=(height - 1, 0),
-                               seed_point=(width - mean_x - crop_width - 1, height - 1))
+    left_wing_path = np.pad(left_wing_path[1:-1, 1:-1],
+                            pad_width=((0, 0), (crop_width, width - mean_x)),
+                            mode='constant',
+                            constant_values=0)
+
+    right_wing_mask, right_wing_path = make_cut(costs=mask[:, mean_x : -crop_width],
+                                                start=(0, wing_right - mean_x),
+                                                end=(height - 1, 0),
+                                                seed_point=(width - mean_x - crop_width - 1, height - 1))
+
+    right_wing_path = np.pad(right_wing_path[1:-1, 1:-1],
+                            pad_width=((0, 0), (mean_x, crop_width)),
+                            mode='constant',
+                            constant_values=0)
 
     wing_mask = np.hstack((left_wing_mask,right_wing_mask))
     wing_mask = mask * np.pad(wing_mask, 
@@ -146,7 +156,7 @@ def segment_wing(mask, wing_left=0.4, wing_right=0.6, crop=0.3):
                                    num_components=2, 
                                    output_bounding_box=False)
 
-    return wing_mask
+    return wing_mask, (left_wing_path, right_wing_path)
 
 def segment_image_file(file_in, folder_out):
     image = cv2.imread(file_in)
@@ -164,7 +174,7 @@ def segment_image_file(file_in, folder_out):
     # file_out = os.path.splitext(file_out)[0] + '.png'
     # cv2.imwrite(file_out, 255*segmented_mask)
 
-    wing_mask = segment_wing(segmented_mask) / 255
+    wing_mask = segment_wing(segmented_mask)[0] / 255
     file_out = os.path.join(folder_out, 'wings_' + filename)
     file_out = os.path.splitext(file_out)[0] + '.png'
     cv2.imwrite(file_out, 255*wing_mask)
