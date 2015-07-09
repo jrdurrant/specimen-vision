@@ -44,20 +44,37 @@ def visualise_colors(colors, output_width, output_height):
     return output
 
 if __name__ == '__main__':
-    input_folder = 'data/all_moths/'
-    output_folder = 'data/moths_segmented/'
+    # input_folder = 'data/all_moths/'
+    # output_folder = 'data/moths_segmented/'
 
-    apply_all_images(input_folder=input_folder,
-                     output_folder=output_folder,
-                     function=segmentation.segment_image_file)
+    # apply_all_images(input_folder=input_folder,
+    #                  output_folder=output_folder,
+    #                  function=segmentation.segment_image_file)
 
     input_folder = 'data/moths_segmented/'
     output_folder = 'output/moths_color_analysis/'
 
-    images = [image_file[6:]
-              for image_file
-              in os.listdir(input_folder)
-              if image_file.startswith('color_')]
+    # check all three folders in case there was an error during segmentation
+    images_color = [image_file[6:]
+                    for image_file
+                    in os.listdir(input_folder)
+                    if image_file.startswith('color_')]
+
+    images_abdomen = [image_file[8:]
+                    for image_file
+                    in os.listdir(input_folder)
+                    if image_file.startswith('abdomen_')]
+
+    images_wings = [image_file[6:]
+                    for image_file
+                    in os.listdir(input_folder)
+                    if image_file.startswith('wings_')]
+
+    images = [image
+              for image
+              in images_color
+              if image in images_abdomen
+              and image in images_wings]
 
     with open(os.path.join(output_folder,'colors.csv'), 'wb') as csvfile:
         writer = csv.writer(csvfile)
