@@ -1,7 +1,4 @@
-data/original
-data/full_image/*
-data/cropped_wing/*
-data/segmented_image/*
+data/*
 debug/*
 output/*
 *.pyc
