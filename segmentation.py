@@ -3,6 +3,7 @@ import cv2
 import os
 from skimage.graph import MCP_Geometric
 from folder import apply_all_images
+import pdb
 
 # hack to account for drawContours function not appearing to fill the contour
 def fillContours(image, contours):
@@ -27,7 +28,21 @@ def largest_components(binary_image, num_components=1, output_bounding_box=False
     else:
         return filled_image
 
-def grabcut_components(image, mask, num_components=1):
+def grabcut(image, foreground, background, iterCount, mode):
+    height, width = image.shape[:2]
+    mask = cv2.GC_PR_FGD*np.ones((height, width), dtype='uint8')
+
+    mask[np.where(foreground > 0)] = cv2.GC_FGD
+    mask[np.where(background < 255)] = cv2.GC_BGD
+
+    backgroundModel = np.zeros((1, 65), np.float64)
+    foregroundModel = np.zeros((1, 65), np.float64)
+
+    cv2.grabCut(image, mask, rect=None, bgdModel=backgroundModel, fgdModel=foregroundModel, iterCount=iterCount, mode=mode)
+
+    return np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8')
+
+def edge_refinement(image, mask, num_components=1):
     h, w, _ = image.shape
     kernel_size = h / 100
     kernel = np.ones((kernel_size, kernel_size), np.uint8)
@@ -37,16 +52,7 @@ def grabcut_components(image, mask, num_components=1):
 
     background = cv2.dilate(mask, kernel, iterations=1)
 
-    mask = cv2.GC_PR_FGD*np.ones((h, w), dtype='uint8')
-    mask[np.where(foreground > 0)] = cv2.GC_FGD
-    mask[np.where(background < 255)] = cv2.GC_BGD
-
-    backgroundModel = np.zeros((1, 65), np.float64)
-    foregroundModel = np.zeros((1, 65), np.float64)
-
-    cv2.grabCut(image, mask, rect=None, bgdModel=backgroundModel, fgdModel=foregroundModel, iterCount=10, mode=cv2.GC_INIT_WITH_MASK)
-
-    mask = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8')
+    mask = grabcut(image, foreground, background, iterCount=10, mode=cv2.GC_INIT_WITH_MASK)
 
     mask_holes_removed = largest_components(mask, 
                                             num_components=1, 
@@ -55,25 +61,35 @@ def grabcut_components(image, mask, num_components=1):
     segmented_image = image * (mask_holes_removed[:, :, np.newaxis] / 255)
     return segmented_image, mask_holes_removed * 255
 
-def segment_butterfly(image, saliency_threshold=100, approximate=True, border=10):
+def saliency_map(image):
     hsv_image = cv2.cvtColor(image, cv2.cv.CV_BGR2HSV)
-    image_height, image_width = image.shape[:2]
     saliency = 0.25 * hsv_image[:, :, 2] + 0.75 * hsv_image[:, :, 1]
-    mask = 255 * np.greater(saliency, saliency_threshold).astype('uint8')
+    return saliency.astype('float32')
+
+def crop_within_limits(image, bounding_rect):
+    left, top, crop_width, crop_height = bounding_rect
+    image_height, image_width = image.shape[:2]
+
+    crop_left, crop_right = max(left, 0), min(left + crop_width, image_width)
+    crop_top, crop_bottom = max(top, 0), min(top + crop_height, image_height)
+
+    return image[crop_top:crop_bottom, crop_left:crop_right]
+
+def segment_butterfly(image, saliency_threshold=100, approximate=True, border=10):
+    image_height, image_width = image.shape[:2]
+    _, mask = cv2.threshold(saliency_map(image), saliency_threshold, 255, cv2.THRESH_BINARY)
 
     component, bounding_rect = largest_components(mask, 
                                                   num_components=1,
                                                   output_bounding_box=True)
     left, top, width, height = bounding_rect
-
-    crop_left, crop_right = max(left - border, 0), min(left + width + border, image_width)
-    crop_top, crop_bottom = max(top - border, 0), min(top + height + border, image_height)
-
-    mask = mask[crop_top:crop_bottom, crop_left:crop_right]
-    image = image[crop_top:crop_bottom, crop_left:crop_right]
+    bounding_rect = (left - border, top - border, width + 2*border, height + 2*border)
+    
+    image = crop_within_limits(image, bounding_rect)
+    mask = crop_within_limits(mask, bounding_rect)
 
     if not approximate:
-        image, mask = grabcut_components(image, mask)
+        image, mask = edge_refinement(image, mask)
 
     return image, mask
 
