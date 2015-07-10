@@ -17,16 +17,13 @@ def fillContours(image, contours):
     cv2.floodFill(image, outline, (0, 0), newVal=0)
     return image
 
-def largest_components(binary_image, num_components=1, output_bounding_box=False):
+def largest_components(binary_image, num_components=1):
     contours, hierarchy = cv2.findContours(binary_image.astype('uint8'), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
     contours = sorted(contours, key=lambda contour: cv2.contourArea(contour), reverse=True)[:num_components]
     filled_image = fillContours(np.zeros_like(binary_image), contours)
 
-    if output_bounding_box:
-        return filled_image, cv2.boundingRect(np.concatenate(contours))
-    else:
-        return filled_image
+    return filled_image, cv2.boundingRect(np.concatenate(contours))
 
 def grabcut(image, foreground, background, iterCount, mode):
     height, width = image.shape[:2]
@@ -48,15 +45,13 @@ def edge_refinement(image, mask, num_components=1):
     kernel = np.ones((kernel_size, kernel_size), np.uint8)
 
     foreground = cv2.erode(mask, kernel, iterations=1)
-    foreground = largest_components(foreground, num_components)
+    foreground = largest_components(foreground, num_components)[0]
 
     background = cv2.dilate(mask, kernel, iterations=1)
 
     mask = grabcut(image, foreground, background, iterCount=10, mode=cv2.GC_INIT_WITH_MASK)
 
-    mask_holes_removed = largest_components(mask, 
-                                            num_components=1, 
-                                            output_bounding_box=False)
+    mask_holes_removed = largest_components(mask, num_components=1)[0]
 
     segmented_image = image * (mask_holes_removed[:, :, np.newaxis] / 255)
     return segmented_image, mask_holes_removed * 255
@@ -79,9 +74,8 @@ def segment_butterfly(image, saliency_threshold=100, approximate=True, border=10
     image_height, image_width = image.shape[:2]
     _, mask = cv2.threshold(saliency_map(image), saliency_threshold, 255, cv2.THRESH_BINARY)
 
-    component, bounding_rect = largest_components(mask, 
-                                                  num_components=1,
-                                                  output_bounding_box=True)
+    component, bounding_rect = largest_components(mask, num_components=1)
+
     left, top, width, height = bounding_rect
     bounding_rect = (left - border, top - border, width + 2*border, height + 2*border)
     
@@ -165,9 +159,7 @@ def segment_wing(mask, wing_left=0.4, wing_right=0.6, crop=0.3):
                               mode='constant',
                               constant_values=1)
 
-    wing_mask = largest_components(wing_mask, 
-                                   num_components=2, 
-                                   output_bounding_box=False)
+    wing_mask = largest_components(wing_mask, num_components=2)[0]
 
     return wing_mask, (left_wing_path, right_wing_path)
 
@@ -193,7 +185,7 @@ def segment_image_file(file_in, folder_out):
     cv2.imwrite(file_out, 255*wing_mask)
 
     body = np.greater(segmented_mask, wing_mask).astype('uint8')
-    body = largest_components(body*255, num_components=1) / 255
+    body = largest_components(body*255, num_components=1)[0] / 255
     file_out = os.path.join(folder_out, 'abdomen_' + filename)
     file_out = os.path.splitext(file_out)[0] + '.png'
     cv2.imwrite(file_out, 255*body)
