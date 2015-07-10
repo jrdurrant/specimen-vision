@@ -89,30 +89,27 @@ def centre_of_mass(binary_image):
     return y, x
 
 def shortest_path(costs, start, end):
-    height, width = costs.shape
-    offsets = [[1, -1], [1, 0], [1, 1]]
+    offsets = [(1, 1), (1, 0), (1, -1), (0, 1), (0, -1), (-1, 1), (-1, 0), (-1, -1)]
     mcp = MCP_Geometric(costs, offsets)
-    _, traceback = mcp.find_costs([start], [end])
-    indices = np.zeros((height, 2), dtype='int32')
-    indices[0, :] = end
-    for row in range(1, height):
-        y, x = indices[row - 1, :]
-        indices[row, :] = indices[row - 1, :] - offsets[traceback[y, x]]
-    
+    mcp.find_costs([start], [end])
+
+    indices = np.array(mcp.traceback(end))
+
     return indices[:, 0], indices[:, 1]
 
-def make_cut(costs, start, end, seed_point):
-    cut_y, cut_x = shortest_path(costs, start, end)
+def make_cut(costs, start, end, seed_point, mask_cost=10):
+    cut_y, cut_x = shortest_path(costs*(mask_cost - 1) + 1, start, end)
 
     path_crop = np.zeros_like(costs)
     path_crop[cut_y, cut_x] = 255
 
     path = np.pad(path_crop, (1, 1), mode='constant', constant_values=(0, 0))
 
-    mask = np.zeros_like(costs)
-    cv2.floodFill(mask, path, seed_point, 1)
+    wing_mask = np.zeros_like(costs)
+    # pass a copy of the path image since it is altered by floodFill
+    cv2.floodFill(wing_mask, np.copy(path), seed_point, 1)
 
-    return mask, path
+    return wing_mask, path
 
 def segment_wing(mask, wing_left=0.4, wing_right=0.6, crop=0.3):
     height, width = mask.shape
