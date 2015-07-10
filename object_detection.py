@@ -34,7 +34,6 @@ def nms(boxes, win_height, win_width, min_overlap=0.5):
 	return maximum_boxes
 
 def visualize_boxes(boxes, image, win_height, win_width, normalise=True):
-    # image_boxes = np.tile(image[:,:,np.newaxis], (1,1,3))
     image_boxes = np.copy(image)
 
     if len(boxes) > 0:
@@ -46,12 +45,10 @@ def visualize_boxes(boxes, image, win_height, win_width, normalise=True):
 
         for box in boxes:
             y, x, score = box.y, box.x, box.score
-            # print score
+
             quality = (score - score_min)/score_range if normalise else 1
             cv2.rectangle(image_boxes, (x, y), (x + win_width, y + win_height), (0,255*quality,255*(1-quality)), 1)
     return image_boxes
 
 win_height = 48
 win_width = 48
-boxes = np.load('svm_data/boxes.npy')
-nms_boxes = nms(boxes, win_height, win_width)
