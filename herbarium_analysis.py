@@ -29,7 +29,7 @@ def scale_images_to_range(images, min_value, max_value, min_percentile=0, max_pe
         images[index] = ((image - minimum) / value_range) * max_value + min_value
 
 if __name__ == '__main__':
-    filenames = ['BM000886029.tif', 'BM000886590.tif']
+    filenames = ['debug/BM000886029.tif', 'debug/BM000886590.tif']
 
     imgs = [cv2.imread(filename)[100:7200, 100:4700, :].astype('float64') for filename in filenames]
     chlorophyll_imgs = [chlorophyll_concentration(img) for img in imgs]

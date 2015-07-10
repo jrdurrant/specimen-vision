@@ -189,8 +189,3 @@ def segment_image_file(file_in, folder_out):
     file_out = os.path.join(folder_out, 'abdomen_' + filename)
     file_out = os.path.splitext(file_out)[0] + '.png'
     cv2.imwrite(file_out, 255*body)
-
-if __name__ == "__main__":
-    apply_all_images(input_folder='data/moths/',
-                     output_folder='data/moths_wings/',
-                     function=segment_image_file)
