@@ -13,8 +13,8 @@ class Category:
         self.image_paths = image_paths
         self.num_samples = len(image_paths)
 
-def gabor_kernels(num_orientations, sigma_vals=(1,3), lamd_vals=(9,11), ksize=15, gamma=0.5, psi=0, ktype=cv2.CV_32F):
-    theta_vals = np.linspace(0, np.pi, num_orientations)
+def gabor_kernels(num_orientations, sigma_vals=(9,15), lamd_vals=(7,15), ksize=49, gamma=1, psi=0, ktype=cv2.CV_32F):
+    theta_vals = np.linspace(0, np.pi, num_orientations, endpoint=False)
 
     kernels = [cv2.getGaborKernel((ksize, ksize), sigma, theta, lambd, gamma, psi, ktype)
                for theta, sigma, lambd in product(theta_vals, sigma_vals, lamd_vals)]
@@ -127,7 +127,7 @@ if __name__ == '__main__':
         scores[index, :] = [labels[index], svm.predict(features[index, :]), 1 - np.abs(scores[index, 0] - scores[index, 1])]
     print('Accuracy = {:.2%}\n'.format(np.mean(scores[:,2])))
 
-    folders = ['data/segmented/female/', 'data/segmented/male/']
+    folders = ['data/segmented_image/color/female/', 'data/segmented_image/color/male/']
 
     categories = []
     for label, folder_path in enumerate(folders):
