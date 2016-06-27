@@ -49,7 +49,7 @@ def edge_refinement(image, mask, num_components=1):
 
     background = cv2.dilate(mask, kernel, iterations=1)
 
-    mask = grabcut(image, foreground, background, iterCount=10, mode=cv2.GC_INIT_WITH_MASK)
+    mask = grabcut(image, foreground, background, iterCount=100, mode=cv2.GC_INIT_WITH_MASK)
 
     mask_holes_removed = largest_components(mask, num_components=1)[0]
 
@@ -161,7 +161,7 @@ def segment_wing(mask, wing_left=0.4, wing_right=0.6, crop=0.3):
 
     wing_mask = largest_components(wing_mask, num_components=2)[0]
 
-    return wing_mask, (left_wing_path, right_wing_path)
+    return wing_mask, (left_wing_path, right_wing_path), (mean_y, mean_x)
 
 def segment_image_file(file_in, folder_out):
     image = cv2.imread(file_in)
