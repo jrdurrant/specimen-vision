@@ -1,9 +1,7 @@
 import numpy as np
 import cv2
-import os
 from skimage.graph import MCP_Geometric
-from folder import apply_all_images
-import pdb
+import os
 
 # hack to account for drawContours function not appearing to fill the contour
 def fillContours(image, contours):
