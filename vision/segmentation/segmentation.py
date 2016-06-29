@@ -53,14 +53,16 @@ def segment_butterfly(image, saliency_threshold=100, border=10):
 
     return image, mask.astype(np.uint8)
 
-def centre_of_mass(binary_image):
-    h, w = binary_image.shape
-    xv, yv = np.meshgrid(np.arange(0, w), np.arange(0, h))
+def centre_of_mass(grayscale_image):
+    weight = grayscale_image
+    weight = np.power(grayscale_image, 4)
+    h, w = weight.shape
+    yv, xv = np.mgrid[:h, :w]
 
-    binary_image[np.where(binary_image > 0)] = 1
+    total_weight = np.sum(weight)
 
-    x = np.mean((binary_image * xv)[np.where(binary_image > 0)])
-    y = np.mean((binary_image * yv)[np.where(binary_image > 0)])
+    x = np.sum(weight * xv) / total_weight
+    y = np.sum(weight * yv) / total_weight
 
     return y, x
 

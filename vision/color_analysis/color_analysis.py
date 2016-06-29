@@ -35,7 +35,7 @@ def dominant_colors(image, num_colors, mask=None):
     colors.sort(key=lambda color: np.mean(color.BGR))
 
     return colors
-    
+
 
 def visualise_colors(colors, output_height, output_width):
     """Visualise a list of ``Color's`` as an image.
