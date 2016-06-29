@@ -6,3 +6,4 @@ output/*
 *.png
 *.npy
 .DS_Store
+docs/_build/*

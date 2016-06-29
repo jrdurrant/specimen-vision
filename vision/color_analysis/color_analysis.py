@@ -3,7 +3,7 @@ import numpy as np
 from scipy.cluster.vq import kmeans2
 from collections import namedtuple
 
-Color = namedtuple('Color', ('RGB', 'proportion'))
+Color = namedtuple('Color', ('BGR', 'proportion'))
 Segment = namedtuple('Segment', ('name', 'mask', 'num_colors'))
 
 def dominant_colors(image, num_colors, mask=None):
@@ -32,14 +32,14 @@ def dominant_colors(image, num_colors, mask=None):
 
     centroids_RGB = cv2.cvtColor(np.reshape(centroids, (-1, 1, 3)), cv2.cv.CV_Lab2BGR)[:, 0, :] * 255.0
     colors = [Color(centroid, count) for centroid, count in zip(centroids_RGB, counts)]
-    colors.sort(key=lambda color: np.mean(color.RGB))
+    colors.sort(key=lambda color: np.mean(color.BGR))
 
     return colors
 
 def visualise_colors(colors, output_height, output_width):
     """Visualise a list of Colors as an image.
 
-    Colors are displayed as blocks, horizontally from left to right.
+    Colors are displayed as blocks, horizontally from left to right in the same order as the list
 
     Args:
         colors (list): list of Color objects.
@@ -47,16 +47,16 @@ def visualise_colors(colors, output_height, output_width):
         output_width (int): Width of the visualisation image.
 
     Returns:
-        ndarray: Visualised colors as an RGB image.
+        ndarray: Visualised colors as a BGR image.
 
     """
     output = np.zeros((output_height, output_width, 3), dtype='float32')
     left = 0
     for color in dc:
         right = left + int(color.proportion * output_width)
-        output[:, left:right, :] = color.RGB
+        output[:, left:right, :] = color.BGR
         left = right
 
-    output[:, right:output_width, :] = colors[-1].RGB
+    output[:, right:output_width, :] = colors[-1].BGR
 
     return output
