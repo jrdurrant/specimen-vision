@@ -18,9 +18,5 @@ class TestSegmentation(unittest.TestCase):
 		segmented_mask_height, segmented_mask_width = segmented_mask.shape[:2]
 
 		self.assertEqual(segmented_image.shape[:2], segmented_mask.shape[:2])
-
-		self.assertGreater(segmented_image_width, 2500)
-		self.assertLess(segmented_image_width, 2650)
-
-		self.assertGreater(segmented_image_height, 1500)
-		self.assertLess(segmented_image_height, 1650)
+		self.assertAlmostEqual(segmented_image_width, 2575, delta=75)
+		self.assertAlmostEqual(segmented_image_height, 1575, delta=75)

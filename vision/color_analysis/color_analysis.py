@@ -7,6 +7,17 @@ Color = namedtuple('Color', ('RGB', 'proportion'))
 Segment = namedtuple('Segment', ('name', 'mask', 'num_colors'))
 
 def dominant_colors(image, num_colors, mask=None):
+    """Reduce image colors to a representative set of a given size.
+
+    Args:
+        image (ndarray): BGR image of shape n x m x 3.
+        num_colors (int): Number of colors to reduce to.
+        mask (array_like, optional): Foreground mask. Defaults to None.
+
+    Returns:
+        list: The list of Color objects representing the most dominant colors in the image.
+
+    """
     image = cv2.cvtColor(image / 255.0, cv2.cv.CV_BGR2Lab)
 
     if mask is not None:
@@ -25,8 +36,21 @@ def dominant_colors(image, num_colors, mask=None):
 
     return colors
 
-def visualise_colors(colors, output_width, output_height):
-    output = np.zeros((100, output_width, 3), dtype='float32')
+def visualise_colors(colors, output_height, output_width):
+    """Visualise a list of Colors as an image.
+
+    Colors are displayed as blocks, horizontally from left to right.
+
+    Args:
+        colors (list): list of Color objects.
+        output_height (int): Height of the visualisation image.
+        output_width (int): Width of the visualisation image.
+
+    Returns:
+        ndarray: Visualised colors as an RGB image.
+
+    """
+    output = np.zeros((output_height, output_width, 3), dtype='float32')
     left = 0
     for color in dc:
         right = left + int(color.proportion * output_width)

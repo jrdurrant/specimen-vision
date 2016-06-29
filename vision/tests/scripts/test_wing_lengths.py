@@ -20,10 +20,8 @@ class TestWingLengths500606(unittest.TestCase):
 
     def test_left_wing_length(self):
         left_wing_length = wing_length(self.wing_mask[:, self.centre_of_mass[1]::-1], self.wing_paths[0][:, self.centre_of_mass[1]::-1])
-        self.assertGreater(left_wing_length, 1150)
-        self.assertLess(left_wing_length, 1190)
+        self.assertAlmostEqual(left_wing_length, 1170, delta=20)
 
     def test_right_wing_length(self):
         right_wing_length = wing_length(self.wing_mask[:, self.centre_of_mass[1]:], self.wing_paths[1][:, self.centre_of_mass[1]:])
-        self.assertGreater(right_wing_length, 1160)
-        self.assertLess(right_wing_length, 1200)
+        self.assertAlmostEqual(right_wing_length, 1180, delta=20)

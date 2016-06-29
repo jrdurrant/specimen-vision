@@ -40,7 +40,7 @@ with open(os.path.join(output_folder,'colors.csv'), 'wb') as csvfile:
 
                 dc = dominant_colors(color.astype('float32'), segment.num_colors, mask=segment.mask)
 
-                output = visualise_colors(dc, 100 * segment.num_colors, 100)
+                output = visualise_colors(dc, 100, 100 * segment.num_colors)
                 cv2.imwrite(os.path.join(output_folder,'{}_{}'.format(segment.name, filename)), output)
 
                 for c in dc:
