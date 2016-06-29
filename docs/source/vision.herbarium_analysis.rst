@@ -4,14 +4,9 @@ vision.herbarium_analysis package
 Submodules
 ----------
 
-vision.herbarium_analysis.herbarium_analysis module
----------------------------------------------------
+.. toctree::
 
-.. automodule:: vision.herbarium_analysis.herbarium_analysis
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
+   vision.herbarium_analysis.herbarium_analysis
 
 Module contents
 ---------------

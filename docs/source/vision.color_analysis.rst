@@ -4,22 +4,10 @@ vision.color_analysis package
 Submodules
 ----------
 
-vision.color_analysis.color_analysis module
--------------------------------------------
+.. toctree::
 
-.. automodule:: vision.color_analysis.color_analysis
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-vision.color_analysis.radial_color module
------------------------------------------
-
-.. automodule:: vision.color_analysis.radial_color
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
+   vision.color_analysis.color_analysis
+   vision.color_analysis.radial_color
 
 Module contents
 ---------------

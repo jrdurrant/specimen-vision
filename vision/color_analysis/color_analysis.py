@@ -35,14 +35,15 @@ def dominant_colors(image, num_colors, mask=None):
     colors.sort(key=lambda color: np.mean(color.BGR))
 
     return colors
+    
 
 def visualise_colors(colors, output_height, output_width):
-    """Visualise a list of Colors as an image.
+    """Visualise a list of ``Color's`` as an image.
 
     Colors are displayed as blocks, horizontally from left to right in the same order as the list
 
     Args:
-        colors (list): list of Color objects.
+        colors (list): list of ``Color`` objects.
         output_height (int): Height of the visualisation image.
         output_width (int): Width of the visualisation image.
 

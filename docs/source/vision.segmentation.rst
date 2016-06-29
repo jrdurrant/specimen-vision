@@ -4,14 +4,9 @@ vision.segmentation package
 Submodules
 ----------
 
-vision.segmentation.segmentation module
----------------------------------------
+.. toctree::
 
-.. automodule:: vision.segmentation.segmentation
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
+   vision.segmentation.segmentation
 
 Module contents
 ---------------

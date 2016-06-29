@@ -11,19 +11,13 @@ Subpackages
     vision.marking_detection
     vision.measurements
     vision.segmentation
-    vision.tests
 
 Submodules
 ----------
 
-vision.io_functions module
---------------------------
+.. toctree::
 
-.. automodule:: vision.io_functions
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
+   vision.io_functions
 
 Module contents
 ---------------

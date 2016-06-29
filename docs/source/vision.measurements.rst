@@ -4,14 +4,9 @@ vision.measurements package
 Submodules
 ----------
 
-vision.measurements.shape_analysis module
------------------------------------------
+.. toctree::
 
-.. automodule:: vision.measurements.shape_analysis
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
+   vision.measurements.shape_analysis
 
 Module contents
 ---------------
