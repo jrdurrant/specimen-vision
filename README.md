@@ -1,4 +1,4 @@
-# insect_analysis
+# Computer Vision for biological specimen images
 
 There are three main types of metadata that can be extracted:
 
