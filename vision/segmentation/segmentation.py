@@ -15,13 +15,16 @@ def fillContours(image, contours):
     cv2.floodFill(image, outline, (0, 0), newVal=0)
     return image
 
-def largest_components(binary_image, num_components=1):
+def largest_components(binary_image, num_components=1, separate=False):
     contours, hierarchy = cv2.findContours(binary_image.astype('uint8'), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
     contours = sorted(contours, key=lambda contour: cv2.contourArea(contour), reverse=True)[:num_components]
     filled_image = fillContours(np.zeros_like(binary_image), contours)
 
-    return filled_image, cv2.boundingRect(np.concatenate(contours))
+    if separate:
+        return filled_image, [cv2.boundingRect(c) for c in contours], [cv2.contourArea(c) for c in contours]
+    else:
+        return filled_image, cv2.boundingRect(np.concatenate(contours))
 
 def saliency_map(image):
     hsv_image = cv2.cvtColor(image, cv2.cv.CV_BGR2HSV)
