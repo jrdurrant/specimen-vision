@@ -4,11 +4,20 @@ import cv2
 import logging
 import numpy as np
 import matplotlib.pyplot as plt
-import os
 from statsmodels.tsa.stattools import acf
 from operator import itemgetter
 from functools import total_ordering
 from vision.segmentation.segmentation import largest_components
+from scipy.stats import entropy
+
+import warnings
+warnings.simplefilter('error')
+
+logging.basicConfig(filename='ruler.log',
+                    filemode='w',
+                    level=logging.DEBUG,
+                    format='%(levelname)s %(message)s')
+
 
 @total_ordering
 class Ruler(object):
@@ -21,22 +30,43 @@ class Ruler(object):
         self.indices = np.s_[y:(y + height), x:(x + width)]
 
         self.hspace = None
-        self.score = 0
+        self.score = None
         self.angle_index = None
+
+        self.graduations = []
+        self.separation = 0
 
     def __lt__(self, other):
         return self.score < other.score
+
     def __eq__(self, other):
         return self.score == other.score
 
+
+def normalise(array):
+    zero_mean_array = array - np.mean(array)
+    return zero_mean_array / np.std(zero_mean_array)
+
+
 def threshold(image):
+    """Convert a full color image to a binary image
+
+    Args:
+        image (ndarray): BGR image of shape n x m x 3.
+
+    Returns:
+        ndarray: Binary image of shape n x m, where 0 is off and 255 is on.
+
+    """
     threshold_val, binary_image = cv2.threshold(image[:, :, 1], 128, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     return binary_image
+
 
 def find_edges(binary_image):
     return skeletonize(1 - binary_image / 255)
 
-def fill_gaps(edges, iterations=2):
+
+def fill_gaps(edges, iterations=1):
     edges = edges * 1.0
     kernel = np.ones((3, 3))
     for i in range(iterations):
@@ -44,9 +74,11 @@ def fill_gaps(edges, iterations=2):
         edges = skeletonize(edges) * 1.0
     return edges * 255.0
 
+
 def hough_transform(binary_image):
     hspace, angles, distances = hough_line(binary_image, theta=np.linspace(0, np.pi, 180, endpoint=False))
     return hspace.astype(np.float32), angles, distances
+
 
 def remove_multiples(scores, ratios):
     n = len(scores)
@@ -68,8 +100,8 @@ def remove_multiples(scores, ratios):
                 filtered_scores.append(scores[i])
         return sorted(filtered_scores, key=itemgetter(0), reverse=True)
 
+
 def find_grid(hspace_angle, nlags, graduations, min_size=4):
-    n = hspace_angle.shape[0]
     ratios = np.array(graduations) / (1.0 * graduations[0])
 
     autocorrelation = acf(hspace_angle, nlags=nlags)
@@ -89,28 +121,52 @@ def find_grid(hspace_angle, nlags, graduations, min_size=4):
 
     return best_separation[0][1]
 
+
 def var_freq(values, freq):
-    mean_freq = np.sum(values * freq) / np.sum(freq)
-    return np.mean(np.power(values - mean_freq, 2) * freq)
+    """Compute variance from values and their frequencies
+
+    Args:
+        values (array): 1-d array of values
+        freq (array): Frequency of occurence in the data of the corresponding value
+    Returns:
+        float32: Variance of the data
+    """
+    mean_value = np.sum(values * freq) / (np.sum(freq))
+    return np.mean(np.power(values - mean_value, 2) * freq)
+
 
 def best_angle(hspace, distances):
+    # needs work!
     num_angles = hspace.shape[1]
-    spread = np.zeros(num_angles)
+    sample_variance = np.zeros(num_angles)
+    sample_entropy = np.zeros(num_angles)
     for i in range(num_angles):
         nz = np.nonzero(hspace[:, i])[0]
-        spread[i] = var_freq(distances[nz[0]:nz[-1]], hspace[nz[0]:nz[-1], i])
+        if nz.size > 1:
+            sample_variance[i] = var_freq(distances[nz[0]:nz[-1]], hspace[nz[0]:nz[-1], i])
+            sample_entropy[i] = entropy(hspace[nz[0]:nz[-1], i])
+    spread = sample_variance - 100000*sample_entropy
+    spread[(sample_variance == 0) & (sample_entropy == 0)] = np.min(spread) - 1
+    # plt.plot(spread)
+    # plt.show()
     return np.argmax(spread), np.max(spread)
 
-def candidate_rulers(binary_image, n=10):
-    filled_image, boxes, areas = largest_components(binary_image, n, separate=True)
+
+def candidate_rulers(binary_image, n=10, output_images=False):
+    filled_images, boxes, areas = largest_components(binary_image, n, separate=True)
     bounding_boxes = (box for box, area in zip(boxes, areas) if area > np.mean(areas))
-    return [Ruler(*box) for box in bounding_boxes]
+    rulers = [Ruler(*box) for box in bounding_boxes]
+    if output_images:
+        return rulers, filled_images
+    else:
+        return rulers
+
 
 def find_ruler(binary_image, num_candidates):
-    rulers = candidate_rulers(binary_image, num_candidates)
+    rulers, images = candidate_rulers(binary_image, num_candidates, output_images=True)
 
-    for ruler in rulers:
-        binary_ruler_image = binary_image[ruler.indices]
+    for i, (ruler, image) in enumerate(zip(rulers, images)):
+        binary_ruler_image = (image / 255.0) * binary_image[ruler.indices]
         edges = fill_gaps(find_edges(binary_ruler_image))
 
         hspace, angles, distances = hough_transform(edges)
@@ -118,15 +174,27 @@ def find_ruler(binary_image, num_candidates):
         ruler.score = angle_score
         ruler.angle_index = angle_index
         ruler.hspace = hspace
+        logging.info('Ruler angle index is {}, score is {}'.format(angle_index, angle_score))
 
     return max(rulers)
 
-logging.basicConfig(filename='ruler.log', filemode='w', level=logging.DEBUG, format='%(levelname)s %(message)s')
-image = cv2.imread('BMNHE_500606.JPG')
-height, width = image.shape[:2]
-binary_image = threshold(image)
 
-ruler = find_ruler(binary_image, num_candidates=10)
+def find_grid_from_ruler(ruler):
+    max_graduation_size = int(max(ruler.width, ruler.height))
+    hspace_angle = ruler.hspace[:, ruler.angle_index]
+    ruler.separation = find_grid(hspace_angle, max_graduation_size, ruler.graduations)
 
-separation = find_grid(ruler.hspace[:, ruler.angle_index], int(image.shape[1] * 0.8), [1, 2, 20])
-logging.info('Line separation: {:.3f}'.format(separation))
+
+def ruler_line_separation(image):
+    height, width = image.shape[:2]
+    binary_image = threshold(image)
+
+    ruler = find_ruler(binary_image, num_candidates=10)
+    ruler.graduations = [0.5, 1, 10]
+
+    find_grid_from_ruler(ruler)
+    logging.info('Line separation: {:.3f}'.format(ruler.separation))
+    return ruler.separation
+
+image = cv2.imread('rotate_90.JPG')
+separation = ruler_line_separation(image)

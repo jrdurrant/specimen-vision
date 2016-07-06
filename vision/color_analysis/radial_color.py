@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 import os
-from wing_segment import wing_segmentation
+from vision.segmentation.segmentation import segment_wing
 
 debug_folder = 'debug/radial/'
 
@@ -100,7 +100,7 @@ if __name__ == '__main__':
 	image = cv2.imread(os.path.join('data', 'segmented_image', 'color', 'male', image_name))
 	mask = cv2.imread(os.path.join('data', 'segmented_image', 'mask', 'male', image_name))[:, :, 0]
 
-	mask2, left_wing, right_wing = wing_segmentation(mask)
+	mask2, left_wing, right_wing = segment_wing(mask)
 	mask2 = mask2 / 255.0
 
 	mask = mask / 255.0

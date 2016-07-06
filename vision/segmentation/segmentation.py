@@ -3,6 +3,7 @@ import cv2
 from skimage.graph import MCP_Geometric
 import os
 
+
 # hack to account for drawContours function not appearing to fill the contour
 def fillContours(image, contours):
     cv2.drawContours(image, contours, contourIdx=-1, color=255, lineType=8, thickness=cv2.cv.CV_FILLED)
@@ -15,21 +16,26 @@ def fillContours(image, contours):
     cv2.floodFill(image, outline, (0, 0), newVal=0)
     return image
 
+
 def largest_components(binary_image, num_components=1, separate=False):
     contours, hierarchy = cv2.findContours(binary_image.astype('uint8'), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
     contours = sorted(contours, key=lambda contour: cv2.contourArea(contour), reverse=True)[:num_components]
-    filled_image = fillContours(np.zeros_like(binary_image), contours)
 
     if separate:
-        return filled_image, [cv2.boundingRect(c) for c in contours], [cv2.contourArea(c) for c in contours]
+        bounding_boxes = [cv2.boundingRect(c) for c in contours]
+        filled_images = [fillContours(np.zeros_like(binary_image), c)[bb[1]:(bb[1] + bb[3]), bb[0]:(bb[0] + bb[2])] for bb, c in zip(bounding_boxes, contours)]
+        return filled_images, bounding_boxes, [cv2.contourArea(c) for c in contours]
     else:
+        filled_image = fillContours(np.zeros_like(binary_image), contours)
         return filled_image, cv2.boundingRect(np.concatenate(contours))
+
 
 def saliency_map(image):
     hsv_image = cv2.cvtColor(image, cv2.cv.CV_BGR2HSV)
     saliency = 0.25 * hsv_image[:, :, 2] + 0.75 * hsv_image[:, :, 1]
     return saliency.astype('float32')
+
 
 def crop_with_border(image, bounding_rect, border):
     left, top, crop_width, crop_height = bounding_rect
@@ -42,6 +48,7 @@ def crop_with_border(image, bounding_rect, border):
 
     return image[crop_top:crop_bottom, crop_left:crop_right]
 
+
 def segment_butterfly(image, saliency_threshold=100, border=10):
     image_height, image_width = image.shape[:2]
 
@@ -50,15 +57,15 @@ def segment_butterfly(image, saliency_threshold=100, border=10):
     _, mask = cv2.threshold(blur, saliency_threshold, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
     mask, bounding_rect = largest_components(mask, num_components=1)
-    
+
     image = crop_with_border(image, bounding_rect, border)
     mask = crop_with_border(mask, bounding_rect, border)
 
     return image, mask.astype(np.uint8)
 
+
 def centre_of_mass(grayscale_image):
     weight = grayscale_image
-    weight = np.power(grayscale_image, 4)
     h, w = weight.shape
     yv, xv = np.mgrid[:h, :w]
 
@@ -69,6 +76,7 @@ def centre_of_mass(grayscale_image):
 
     return y, x
 
+
 def shortest_path(costs, start, end):
     offsets = [(1, 1), (1, 0), (1, -1), (0, 1), (0, -1), (-1, 1), (-1, 0), (-1, -1)]
     mcp = MCP_Geometric(costs, offsets)
@@ -77,6 +85,7 @@ def shortest_path(costs, start, end):
     indices = np.array(mcp.traceback(end))
 
     return indices[:, 0], indices[:, 1]
+
 
 def min_cost_cut(costs, start, end, seed_point, mask_cost=10):
     cut_y, cut_x = shortest_path(costs*(mask_cost - 1) + 1, start, end)
@@ -92,12 +101,15 @@ def min_cost_cut(costs, start, end, seed_point, mask_cost=10):
 
     return wing_mask, path
 
+
 def segment_wing(mask, wing_left=0.4, wing_right=0.6, crop=0.3):
     height, width = mask.shape
 
     mean_y, mean_x = centre_of_mass(mask)
 
     crop_width = int(width * crop)
+
+    print(mean_y, mean_x)
 
     wing_left = int(mean_x * (0.5 + wing_left))
     wing_right = int(mean_x * (0.5 + wing_right))
@@ -114,18 +126,18 @@ def segment_wing(mask, wing_left=0.4, wing_right=0.6, crop=0.3):
                             mode='constant',
                             constant_values=0)
 
-    right_wing_mask, right_wing_path = min_cost_cut(costs=mask[:, mean_x : -crop_width],
+    right_wing_mask, right_wing_path = min_cost_cut(costs=mask[:, mean_x:-crop_width],
                                                     start=(0, wing_right - mean_x),
                                                     end=(height - 1, 0),
                                                     seed_point=(width - mean_x - crop_width - 1, height - 1))
 
     right_wing_path = np.pad(right_wing_path[1:-1, 1:-1],
-                            pad_width=((0, 0), (mean_x, crop_width)),
-                            mode='constant',
-                            constant_values=0)
+                             pad_width=((0, 0), (mean_x, crop_width)),
+                             mode='constant',
+                             constant_values=0)
 
-    wing_mask = np.hstack((left_wing_mask,right_wing_mask))
-    wing_mask = mask * np.pad(wing_mask, 
+    wing_mask = np.hstack((left_wing_mask, right_wing_mask))
+    wing_mask = mask * np.pad(wing_mask,
                               pad_width=((0, 0), (crop_width, crop_width)),
                               mode='constant',
                               constant_values=1)
@@ -133,6 +145,7 @@ def segment_wing(mask, wing_left=0.4, wing_right=0.6, crop=0.3):
     wing_mask = largest_components(wing_mask, num_components=2)[0]
 
     return wing_mask, (left_wing_path, right_wing_path), (mean_y, mean_x)
+
 
 def segment_image_file(file_in, folder_out):
     image = cv2.imread(file_in)
