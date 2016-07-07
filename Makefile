@@ -1,6 +1,6 @@
-.PHONY: all clean-pyc test docs
+.PHONY: all clean-pyc test doc
 
-all: clean-pyc test docs
+all: clean-pyc test doc
 
 clean-pyc:
 	find . -name '*.pyc' -exec rm -f {} +
@@ -11,7 +11,7 @@ test:
 	@echo 'Tests'
 	nosetests -v --cover-html --cover-inclusive --cover-erase --cover-tests --cover-package=vision vision
 
-docs:
+doc:
 	@echo 'Docs'
 	sphinx-apidoc -fe -o docs/source/ vision vision/tests
 	cd docs && $(MAKE) html

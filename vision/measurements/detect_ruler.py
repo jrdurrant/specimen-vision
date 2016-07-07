@@ -3,7 +3,6 @@ from skimage.morphology import skeletonize
 import cv2
 import logging
 import numpy as np
-import matplotlib.pyplot as plt
 from statsmodels.tsa.stattools import acf
 from operator import itemgetter
 from functools import total_ordering
@@ -30,6 +29,9 @@ class Ruler(object):
         self.indices = np.s_[y:(y + height), x:(x + width)]
 
         self.hspace = None
+        self.angles = None
+        self.distances = None
+
         self.score = None
         self.angle_index = None
 
@@ -135,20 +137,14 @@ def var_freq(values, freq):
     return np.mean(np.power(values - mean_value, 2) * freq)
 
 
-def best_angle(hspace, distances):
-    # needs work!
-    num_angles = hspace.shape[1]
-    sample_variance = np.zeros(num_angles)
-    sample_entropy = np.zeros(num_angles)
-    for i in range(num_angles):
-        nz = np.nonzero(hspace[:, i])[0]
-        if nz.size > 1:
-            sample_variance[i] = var_freq(distances[nz[0]:nz[-1]], hspace[nz[0]:nz[-1], i])
-            sample_entropy[i] = entropy(hspace[nz[0]:nz[-1], i])
-    spread = sample_variance - 100000*sample_entropy
-    spread[(sample_variance == 0) & (sample_entropy == 0)] = np.min(spread) - 1
-    # plt.plot(spread)
-    # plt.show()
+def best_angle(features, normalise_features=False, feature_range=None):
+    num_features = len(features)
+    if normalise_features:
+        for i in range(num_features):
+            features[i] = (features[i] - feature_range[i][0]) / (feature_range[i][1] - feature_range[i][0])
+
+    spread = features[0] - features[1]
+    spread[(features[0] == 0) & (features[1] == 0)] = np.min(spread) - 1
     return np.argmax(spread), np.max(spread)
 
 
@@ -162,18 +158,40 @@ def candidate_rulers(binary_image, n=10, output_images=False):
         return rulers
 
 
+def get_hspace_features(hspace, distances):
+    num_angles = hspace.shape[1]
+    sample_variance = np.zeros(num_angles)
+    sample_entropy = np.zeros(num_angles)
+    for i in range(num_angles):
+        nz = np.nonzero(hspace[:, i])[0]
+        if nz.size > 1:
+            sample_variance[i] = var_freq(distances[nz[0]:nz[-1]], hspace[nz[0]:nz[-1], i])
+            sample_entropy[i] = entropy(hspace[nz[0]:nz[-1], i])
+    return [sample_variance, sample_entropy]
+
+
 def find_ruler(binary_image, num_candidates):
     rulers, images = candidate_rulers(binary_image, num_candidates, output_images=True)
 
     for i, (ruler, image) in enumerate(zip(rulers, images)):
         binary_ruler_image = (image / 255.0) * binary_image[ruler.indices]
         edges = fill_gaps(find_edges(binary_ruler_image))
-
         hspace, angles, distances = hough_transform(edges)
-        angle_index, angle_score = best_angle(hspace, distances)
+        ruler.hspace = hspace
+        ruler.angles = angles
+        ruler.distances = distances
+
+    features_ruler = [get_hspace_features(r.hspace, r.distances) for r in rulers]
+    features_separate = zip(*features_ruler)
+    features = [np.concatenate(feature) for feature in features_separate]
+    feature_range = [(np.min(f), np.max(f)) for f in features]
+
+    for i, ruler in enumerate(rulers):
+        angle_index, angle_score = best_angle(features_ruler[i],
+                                              normalise_features=True,
+                                              feature_range=feature_range)
         ruler.score = angle_score
         ruler.angle_index = angle_index
-        ruler.hspace = hspace
         logging.info('Ruler angle index is {}, score is {}'.format(angle_index, angle_score))
 
     return max(rulers)
@@ -195,6 +213,3 @@ def ruler_line_separation(image):
     find_grid_from_ruler(ruler)
     logging.info('Line separation: {:.3f}'.format(ruler.separation))
     return ruler.separation
-
-image = cv2.imread('rotate_90.JPG')
-separation = ruler_line_separation(image)

@@ -23,7 +23,7 @@ class TestTransforms(unittest.TestCase):
     @nottest
     def generate_test_files():
         test_dir_files = os.listdir(os.path.join(TEST_DATA, 'ruler'))
-        return fnmatch.filter(test_dir_files, '*.JPG')
+        return sorted(fnmatch.filter(test_dir_files, '*.JPG'))
 
     @parameterized.expand(generate_test_files())
     def test_transform(self, file):

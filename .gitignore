@@ -8,6 +8,9 @@
 !vision/tests/test_data/*.JPG
 *.png
 !vision/tests/test_data/*.png
+!docs/images/*.png
+*.svg
+!docs/images/*.svg
 
 .DS_Store
 docs/_build/*
