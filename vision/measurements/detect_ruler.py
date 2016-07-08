@@ -158,7 +158,8 @@ def find_grid(hspace_angle, nlags, graduations, min_size=4):
     for i, x in enumerate(separation):
         score[i] = np.sum(np.interp(x * ratios, range(nlags + 1), autocorrelation))
 
-    best_scores = np.argsort(score)[-10:]
+    num_scores = ratios.size * 4
+    best_scores = np.argsort(score)[-num_scores:]
     best_separation = zip(score[best_scores], separation[best_scores])
 
     logging.info('Line separation candidates are:')
@@ -249,7 +250,19 @@ def find_grid_from_ruler(ruler):
     ruler.separation = find_grid(hspace_angle, max_graduation_size, ruler.graduations)
 
 
-def ruler_scale_factor(image, graduations=[0.5, 1, 10], distance=1):
+def ruler_scale_factor(image, graduations, distance=1):
+    """Returns the scale factor to convert from image coordinates to real world coordinates
+
+    Args:
+        image: BGR image of shape n x m x 3.
+        graduations: List of graduation spacings in order of spacing size. If distance is not given,
+                     these will be interpreted as the actual spacings in real world coordinates.
+                     Otherwise, they are interpreted as relative spacings
+        distance (optional): The real world size of the smallest graduation spacing
+    Returns:
+        float: Unitless scale factor from image coordinates to real world coordinates.
+
+    """
     height, width = image.shape[:2]
     binary_image = threshold(image)
 
