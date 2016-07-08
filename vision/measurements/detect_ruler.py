@@ -130,25 +130,23 @@ def hough_transform(binary_image):
     return hspace.astype(np.float32), angles, distances
 
 
-def remove_multiples(scores, ratios):
+def remove_multiples(scores, threshold=0.05):
+    """Returns a list where no elements are integer multiples of any other elements
+
+    """
     n = len(scores)
-    n_ratios = len(ratios)
 
     scores.sort(key=itemgetter(1))
 
-    if n_ratios == 1:
-        return scores
-    else:
-        filtered_scores = []
-        for i in range(n):
-            multiple = False
-            for j in range(i):
-                for k in range(1, n_ratios):
-                    if np.power(scores[i][1] / scores[j][1] - ratios[k], 2) < 0.1:
-                        multiple = True
-            if not multiple:
-                filtered_scores.append(scores[i])
-        return sorted(filtered_scores, key=itemgetter(0), reverse=True)
+    filtered_scores = []
+    for i in range(n):
+        multiple = False
+        for j in range(i):
+            if abs(scores[i][1] / scores[j][1] % 1) < threshold:
+                multiple = True
+        if not multiple:
+            filtered_scores.append(scores[i])
+    return sorted(filtered_scores, key=itemgetter(0), reverse=True)
 
 
 def find_grid(hspace_angle, nlags, graduations, min_size=4):
@@ -167,7 +165,7 @@ def find_grid(hspace_angle, nlags, graduations, min_size=4):
     for s in best_separation:
         logging.info(s)
 
-    best_separation = remove_multiples(best_separation, ratios)
+    best_separation = remove_multiples(best_separation)
 
     return best_separation[0][1]
 
@@ -221,14 +219,13 @@ def get_hspace_features(hspace, distances):
 def find_ruler(binary_image, num_candidates):
     rulers, images = candidate_rulers(binary_image, num_candidates, output_images=True)
 
-    for i, (ruler, image) in enumerate(zip(rulers, images)):
+    for ruler, image in zip(rulers, images):
         binary_ruler_image = (image / 255.0) * binary_image[ruler.indices]
         edges = fill_gaps(find_edges(binary_ruler_image))
         hspace, angles, distances = hough_transform(edges)
         ruler.hspace = hspace
         ruler.angles = angles
         ruler.distances = distances
-        cv2.imwrite('edges_{:02d}.png'.format(i), edges)
 
     features_ruler = [get_hspace_features(r.hspace, r.distances) for r in rulers]
     features_separate = zip(*features_ruler)
