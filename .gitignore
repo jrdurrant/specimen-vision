@@ -4,8 +4,10 @@
 
 *.jpg
 !vision/tests/test_data/*.jpg
+!docs/images/*.jpg
 *.JPG
 !vision/tests/test_data/*.JPG
+!docs/images/*.JPG
 *.png
 !vision/tests/test_data/*.png
 !docs/images/*.png

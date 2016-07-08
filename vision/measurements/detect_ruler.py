@@ -9,22 +9,51 @@ from functools import total_ordering
 from vision.segmentation.segmentation import largest_components
 from scipy.stats import entropy
 
-import warnings
-warnings.simplefilter('error')
-
 logging.basicConfig(filename='ruler.log',
                     filemode='w',
                     level=logging.DEBUG,
                     format='%(levelname)s %(message)s')
 
 
-@total_ordering
-class Ruler(object):
+class Box(object):
+    """A 2D bounding box
+
+    Attributes:
+        x: x-coordinate of top-left corner
+        y: y-coordinate of top-left corner
+        width: width of bounding box
+        height: height of bounding box
+
+    """
     def __init__(self, x, y, width, height):
         self.x = x
         self.y = y
         self.width = width
         self.height = height
+
+
+@total_ordering
+class Ruler(object):
+    """A ruler from an image
+
+    This class describes the rulers position in an image, as well as defining quantities that assess its
+    suitability to represent an actual ruler and the parameters of that ruler
+
+    Attributes:
+        bounds: A Box object describing the bounding box of the ruler in its image
+        indices: A NumPy slice object that can be used for cropping the ruler from its image
+        hspace: An array of the bins resulting from the Hough transform on the cropped image of the ruler
+        angles: An array of the angle bins used for the Hough transform :py:attr:`hspace`
+        distances: An array of the distance bins used for the Hough transform :py:attr:`hspace`
+        score: Measure of how well this ruler fits the expected pattern of a ruler
+        angle_index: Index corresponding to the :py:attr:`angles`
+            array of the angle of the graduations in the image
+        graduations: List of the size of the gaps between different sized graduations, in ascending order
+        separation: Distance in *pixels* between the smallest graduations
+
+    """
+    def __init__(self, x, y, width, height):
+        self.bounds = Box(x, y, width, height)
 
         self.indices = np.s_[y:(y + height), x:(x + width)]
 
@@ -45,11 +74,6 @@ class Ruler(object):
         return self.score == other.score
 
 
-def normalise(array):
-    zero_mean_array = array - np.mean(array)
-    return zero_mean_array / np.std(zero_mean_array)
-
-
 def threshold(image):
     """Convert a full color image to a binary image
 
@@ -64,11 +88,35 @@ def threshold(image):
     return binary_image
 
 
-def find_edges(binary_image):
-    return skeletonize(1 - binary_image / 255)
+def find_edges(binary_ruler_image):
+    """Find edges as a preprocess for line detection
+
+    Note:
+        For this purpose, only the ruler's lines are needed and so it is only in those areas that the
+        edge preprocessing needs to make sense.
+
+    Args:
+        binary_ruler_image: 2D Binary image, where 0 is off and 255 is on.
+
+    Returns:
+        ndarray: Binary image of shape n x m, where 0 is off and 255 is on.
+
+    """
+    return skeletonize(1 - binary_ruler_image / 255)
 
 
 def fill_gaps(edges, iterations=1):
+    """Fill in *small* gaps in structures of a binary image
+
+    Args:
+        edges: 2D Binary image, where 0 is off and 255 is on.
+        iterations: Number of iterations. Higher numbers of iterations fills larger gaps, but can cause
+                    thin structures to collapse and merge together.
+
+    Returns:
+        ndarray: Binary image of shape n x m, where 0 is off and 255 is on.
+
+    """
     edges = edges * 1.0
     kernel = np.ones((3, 3))
     for i in range(iterations):
@@ -180,6 +228,7 @@ def find_ruler(binary_image, num_candidates):
         ruler.hspace = hspace
         ruler.angles = angles
         ruler.distances = distances
+        cv2.imwrite('edges_{:02d}.png'.format(i), edges)
 
     features_ruler = [get_hspace_features(r.hspace, r.distances) for r in rulers]
     features_separate = zip(*features_ruler)
@@ -198,18 +247,21 @@ def find_ruler(binary_image, num_candidates):
 
 
 def find_grid_from_ruler(ruler):
-    max_graduation_size = int(max(ruler.width, ruler.height))
+    max_graduation_size = int(max(ruler.bounds.width, ruler.bounds.height))
     hspace_angle = ruler.hspace[:, ruler.angle_index]
     ruler.separation = find_grid(hspace_angle, max_graduation_size, ruler.graduations)
 
 
-def ruler_line_separation(image):
+def ruler_scale_factor(image, graduations=[0.5, 1, 10], distance=1):
     height, width = image.shape[:2]
     binary_image = threshold(image)
 
     ruler = find_ruler(binary_image, num_candidates=10)
-    ruler.graduations = [0.5, 1, 10]
+    ruler.graduations = graduations
 
     find_grid_from_ruler(ruler)
-    logging.info('Line separation: {:.3f}'.format(ruler.separation))
-    return ruler.separation
+
+    line_separation_pixels = ruler.separation
+
+    logging.info('Line separation: {:.3f}'.format(line_separation_pixels))
+    return distance * graduations[0] / line_separation_pixels
