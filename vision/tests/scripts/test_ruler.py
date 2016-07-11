@@ -3,6 +3,7 @@ import csv
 import os
 import fnmatch
 import unittest
+import numpy as np
 from nose_parameterized import parameterized
 from nose.tools import nottest
 from operator import itemgetter
@@ -20,7 +21,7 @@ class TestTransforms(unittest.TestCase):
 
     def setUp(self):
         image_base = cv2.imread(os.path.join(folder_distort, 'test.JPG'))
-        self.scale_factor_base = ruler_scale_factor(image_base)
+        self.scale_factor_base = ruler_scale_factor(image_base, graduations=[1, 2, 20], distance=0.5)
 
     def tearDown(self):
         pass
@@ -33,7 +34,7 @@ class TestTransforms(unittest.TestCase):
     @parameterized.expand(generate_test_files())
     def test_transform(self, file):
         image = cv2.imread(os.path.join(folder_distort, file))
-        scale_factor = ruler_scale_factor(image)
+        scale_factor = ruler_scale_factor(image, graduations=[1, 2, 20], distance=0.5)
         self.assertAlmostEqual(self.scale_factor_base, scale_factor, delta=0.2)
 
 
@@ -54,7 +55,7 @@ class TestMeasured(unittest.TestCase):
     @parameterized.expand(generate_test_files())
     def test_measurement(self, file, separation):
         image = cv2.imread(os.path.join(folder_measure, file))
-        scale_factor = ruler_scale_factor(image)
+        scale_factor = ruler_scale_factor(image, graduations=[1, 2, 20], distance=0.5)
         self.assertAlmostEqual(separation, 0.5 / scale_factor, delta=0.5)
 
 
@@ -69,3 +70,18 @@ class TestRemoveMultiples(unittest.TestCase):
         evens = zip(range(2, 10, 2), range(2, 10, 2))
         evens_no_multiples = remove_multiples(evens)
         self.assertEqual(evens_no_multiples, [(2, 2)])
+
+    def test_evens_reverse(self):
+        evens = zip(range(2, 10, 2), range(2, 10, 2)[::-1])
+        evens_no_multiples = remove_multiples(evens)
+        self.assertEqual(evens_no_multiples, [(8, 2)])
+
+    def test_random(self):
+        indices = (np.random.rand(20) * 0.1 - 0.05) + np.random.randint(1, 10, 20)
+        indices[0] = 1
+        scores = zip(np.random.rand(10) * 10, indices)
+        scores_no_multiples = remove_multiples(scores)
+        max_ratio = max(scores_no_multiples, key=itemgetter(1))[1]
+        min_ratio = min(scores_no_multiples, key=itemgetter(1))[1]
+        self.assertLessEqual(abs(max_ratio - 1), 1 + 0.05)
+        self.assertLessEqual(abs(min_ratio - 1), 1 + 0.05)
