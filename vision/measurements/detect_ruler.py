@@ -246,7 +246,17 @@ def best_angle(features, feature_range):
 
     spread = features[0] - features[1]
     spread[(features[0] == 0) & (features[1] == 0)] = np.min(spread) - 1
-    return np.argmax(spread), np.max(spread)
+
+    spread_global = np.zeros_like(spread)
+    num_angles = spread.size
+    weight = np.arange(num_angles) * np.arange(num_angles)[::-1]
+    weight = weight.astype(np.float32) / np.max(weight)
+    total_weight = np.sum(weight)
+    for i in range(num_angles):
+        current_weight = np.roll(weight, i)
+        spread_global[i] = spread[i] - np.sum(spread * current_weight) / total_weight
+
+    return np.argmax(spread_global), np.max(spread_global)
 
 
 def candidate_rulers(binary_image, n=10, output_images=False):
