@@ -2,41 +2,22 @@ import numpy as np
 import cv2
 from skimage.graph import MCP_Geometric
 import os
+from vision import Box, Contour
+from operator import attrgetter
 
 
-def fillContours(image, contours):
-    return cv2.drawContours(image, contours, contourIdx=-1, color=255, lineType=8, thickness=cv2.FILLED)
-
-
-def largest_components(binary_image, num_components=1, separate=False):
-    binary_image, contours, hierarchy = cv2.findContours(binary_image.astype('uint8'), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    contours = sorted(contours, key=lambda contour: cv2.contourArea(contour), reverse=True)[:num_components]
-
-    if separate:
-        bounding_boxes = [cv2.boundingRect(c) for c in contours]
-        filled_images = [fillContours(np.zeros_like(binary_image), [c])[bb[1]:(bb[1] + bb[3]), bb[0]:(bb[0] + bb[2])] for bb, c in zip(bounding_boxes, contours)]
-        return filled_images, bounding_boxes, [cv2.contourArea(c) for c in contours]
-    else:
-        filled_image = fillContours(np.zeros_like(binary_image), contours)
-        return filled_image, cv2.boundingRect(np.concatenate(contours))
+def largest_components(binary_image, num_components=1):
+    binary_image, contours, hierarchy = cv2.findContours(binary_image.astype('uint8'),
+                                                         cv2.RETR_EXTERNAL,
+                                                         cv2.CHAIN_APPROX_NONE)
+    contours = [Contour(points) for points in contours]
+    return sorted(contours, key=attrgetter('area'), reverse=True)[:num_components]
 
 
 def saliency_map(image):
     hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     saliency = 0.25 * hsv_image[:, :, 2] + 0.75 * hsv_image[:, :, 1]
     return saliency.astype('float32')
-
-
-def crop_with_border(image, bounding_rect, border):
-    left, top, crop_width, crop_height = bounding_rect
-    image_height, image_width = image.shape[:2]
-
-    crop_left = max(left - border, 0)
-    crop_right = min(left + crop_width + border, image_width)
-    crop_top = max(top - border, 0)
-    crop_bottom = min(top + crop_height + border, image_height)
-
-    return image[crop_top:crop_bottom, crop_left:crop_right]
 
 
 def segment_butterfly(image, saliency_threshold=100, border=10):
@@ -46,12 +27,15 @@ def segment_butterfly(image, saliency_threshold=100, border=10):
     blur = cv2.GaussianBlur(saliency, (5, 5), 0).astype(np.uint8)
     _, mask = cv2.threshold(blur, saliency_threshold, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
-    mask, bounding_rect = largest_components(mask, num_components=1)
+    butterfly_contour = largest_components(mask, num_components=1)[0]
+    mask = butterfly_contour.draw(image=np.zeros_like(mask), filled=True)
 
-    image = crop_with_border(image, bounding_rect, border)
-    mask = crop_with_border(mask, bounding_rect, border)
+    bounding_box = butterfly_contour.bounding_box
+    bounding_box.grow(border)
+    image_extents = Box(0, 0, image_width, image_height)
+    bounding_box &= image_extents
 
-    return image, mask.astype(np.uint8)
+    return image[bounding_box.indices], mask[bounding_box.indices].astype(np.uint8)
 
 
 def centre_of_mass(grayscale_image):
@@ -132,7 +116,12 @@ def segment_wing(mask, wing_left=0.4, wing_right=0.6, crop=0.3):
                               mode='constant',
                               constant_values=1)
 
-    wing_mask = largest_components(wing_mask, num_components=2)[0]
+    left_wing_contour, right_wing_contour = largest_components(wing_mask, num_components=2)
+    wings_bounding_box = left_wing_contour.bounding_box | right_wing_contour.bounding_box
+    wing_mask = np.zeros((wings_bounding_box.height, wings_bounding_box.width))
+
+    wing_mask = left_wing_contour.draw(image=wing_mask, filled=True)
+    wing_mask = right_wing_contour.draw(image=wing_mask, filled=True)
 
     return wing_mask, (left_wing_path, right_wing_path), (mean_y, mean_x)
 
@@ -156,8 +145,9 @@ def segment_image_file(file_in, folder_out):
     file_out = os.path.splitext(file_out)[0] + '.png'
     cv2.imwrite(file_out, 255 * wing_mask)
 
-    body = np.greater(segmented_mask, wing_mask).astype('uint8')
-    body = largest_components(body * 255, num_components=1)[0] / 255
+    body_mask = np.greater(segmented_mask, wing_mask).astype('uint8')
+    body_contour = largest_components(body_mask * 255, num_components=1)[0]
+    body_image = body_contour.draw(filled=True, crop=True)
     file_out = os.path.join(folder_out, 'abdomen_' + filename)
     file_out = os.path.splitext(file_out)[0] + '.png'
-    cv2.imwrite(file_out, 255 * body)
+    cv2.imwrite(file_out, 255 * body_image)

@@ -8,33 +8,12 @@ from operator import itemgetter
 from functools import total_ordering
 from vision.segmentation.segmentation import largest_components
 from scipy.stats import entropy
+from vision import Box
 
 logging.basicConfig(filename='ruler.log',
                     filemode='w',
                     level=logging.DEBUG,
                     format='%(levelname)s %(message)s')
-
-
-class Box(object):
-    """A 2D bounding box
-
-    Attributes:
-        x: x-coordinate of top-left corner
-        y: y-coordinate of top-left corner
-        width: width of bounding box
-        height: height of bounding box
-
-    """
-    def __init__(self, x, y, width, height):
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
-
-    @property
-    def indices(self):
-        """(slice, slice): indices of the box for slicing from a larger array"""
-        return slice(self.y, (self.y + self.height)), slice(self.x, (self.x + self.width))
 
 
 @total_ordering
@@ -68,6 +47,10 @@ class Ruler(object):
 
         self.graduations = []
         self.separation = 0
+
+    @classmethod
+    def from_box(cls, box):
+        return cls(box.x, box.y, box.width, box.height)
 
     @property
     def indices(self):
@@ -273,11 +256,12 @@ def candidate_rulers(binary_image, n=10, output_images=False):
         list: List of candidate :py:class:`Ruler` objects.
 
     """
-    filled_images, boxes, areas = largest_components(binary_image, n, separate=True)
-    bounding_boxes = (box for box, area in zip(boxes, areas) if area > np.mean(areas))
-    rulers = [Ruler(*box) for box in bounding_boxes]
+    components = largest_components(binary_image, n)
+    mean_area = np.mean([component.area for component in components])
+    candidate_components = [c for c in components if c.area > mean_area]
+    rulers = [Ruler.from_box(c.bounding_box) for c in candidate_components]
     if output_images:
-        return rulers, filled_images
+        return rulers, [c.draw(filled=True) for c in candidate_components]
     else:
         return rulers
 
