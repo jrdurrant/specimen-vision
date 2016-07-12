@@ -2,7 +2,7 @@ import cv2
 import os
 import unittest
 import numpy as np
-from vision.segmentation.segmentation import saliency_map
+from vision.segmentation.segmentation import saliency_map, largest_components
 from vision.measurements.landmarks import shape_context, cartesian_to_polar
 from vision.tests import TEST_DATA
 
@@ -30,21 +30,28 @@ class TestShapeContextImage(unittest.TestCase):
         image = cv2.imread(os.path.join(TEST_DATA, 'BMNHE_500606.JPG'))
         saliency = saliency_map(image).astype(np.uint8)
         _, binary_image = cv2.threshold(saliency, 128, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        cv2.imwrite('b.png', binary_image)
-        _, contours, _ = cv2.findContours(binary_image.astype('uint8'),
-                                          cv2.RETR_EXTERNAL,
-                                          cv2.CHAIN_APPROX_NONE)
-        self.outline = sorted(contours, key=lambda contour: cv2.contourArea(contour), reverse=True)[0]
+        self.outline = largest_components(binary_image, num_components=1)[0]
 
     def tearDown(self):
         pass
 
     def test_shape_context(self):
-        vertices = self.outline[:, 0, :]
-        h = shape_context(vertices[0], vertices, num_bins_log_radius=5, num_bins_theta=12)
-        vertices_flipped = np.copy(vertices)
-        vertices_flipped[:, 1] *= -1
-        h_flipped = shape_context(vertices_flipped[0], vertices_flipped, num_bins_log_radius=5, num_bins_theta=12)
+        image_flipped = cv2.imread(os.path.join(TEST_DATA, 'BMNHE_500606_flipped.JPG'))
+        saliency = saliency_map(image_flipped).astype(np.uint8)
+        _, binary_image = cv2.threshold(saliency, 128, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        outline_flipped = largest_components(binary_image, num_components=1)[0]
+        cv2.imwrite('b.png', self.outline.draw(image=np.zeros_like(binary_image), filled=True))
+        cv2.imwrite('b2.png', outline_flipped.draw(image=np.zeros_like(binary_image), filled=True))
+        vertices = self.outline.points[:, 0, :]
+        vertices_flipped = outline_flipped.points[:, 0, :]
+        h = shape_context((2436, 1457),
+                          vertices,
+                          num_bins_log_radius=5,
+                          num_bins_theta=12)
+        h_flipped = shape_context((4339, 1529),
+                                  vertices_flipped,
+                                  num_bins_log_radius=5,
+                                  num_bins_theta=12)
         np.testing.assert_array_equal(h, h_flipped)
 
 
