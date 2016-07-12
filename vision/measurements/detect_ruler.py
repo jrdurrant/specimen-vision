@@ -197,7 +197,7 @@ def find_grid(hspace_angle, max_separation, graduations, min_size=4):
 
     num_scores = ratios.size * 4
     best_scores = np.argsort(score)[-num_scores:]
-    best_separation = zip(score[best_scores], separation[best_scores])
+    best_separation = list(zip(score[best_scores], separation[best_scores]))
 
     logging.info('Line separation candidates are:')
     for s in best_separation:
@@ -327,7 +327,7 @@ def find_ruler(binary_image, num_candidates):
         ruler.distances = distances
 
     features_ruler = [get_hspace_features(r.hspace, r.distances) for r in rulers]
-    features_separate = zip(*features_ruler)
+    features_separate = list(zip(*features_ruler))
     features = [np.concatenate(feature) for feature in features_separate]
     feature_range = [(np.min(f), np.max(f)) for f in features]
 

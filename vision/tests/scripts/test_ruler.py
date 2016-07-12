@@ -67,19 +67,19 @@ class TestRemoveMultiples(unittest.TestCase):
         pass
 
     def test_evens(self):
-        evens = zip(range(2, 10, 2), range(2, 10, 2))
+        evens = list(zip(range(2, 10, 2), range(2, 10, 2)))
         evens_no_multiples = remove_multiples(evens)
         self.assertEqual(evens_no_multiples, [(2, 2)])
 
     def test_evens_reverse(self):
-        evens = zip(range(2, 10, 2), range(2, 10, 2)[::-1])
+        evens = list(zip(range(2, 10, 2), range(2, 10, 2)[::-1]))
         evens_no_multiples = remove_multiples(evens)
         self.assertEqual(evens_no_multiples, [(8, 2)])
 
     def test_random(self):
         indices = (np.random.rand(20) * 0.1 - 0.05) + np.random.randint(1, 10, 20)
         indices[0] = 1
-        scores = zip(np.random.rand(10) * 10, indices)
+        scores = list(zip(np.random.rand(10) * 10, indices))
         scores_no_multiples = remove_multiples(scores)
         max_ratio = max(scores_no_multiples, key=itemgetter(1))[1]
         min_ratio = min(scores_no_multiples, key=itemgetter(1))[1]

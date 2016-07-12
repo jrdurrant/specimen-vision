@@ -1,5 +1,5 @@
-import color_analysis
-import herbarium_analysis
-import marking_detection
-import measurements
-import segmentation
+import vision.color_analysis
+import vision.herbarium_analysis
+import vision.marking_detection
+import vision.measurements
+import vision.segmentation

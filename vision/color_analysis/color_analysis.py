@@ -6,6 +6,7 @@ from collections import namedtuple
 Color = namedtuple('Color', ('BGR', 'proportion'))
 Segment = namedtuple('Segment', ('name', 'mask', 'num_colors'))
 
+
 def dominant_colors(image, num_colors, mask=None):
     """Reduce image colors to a representative set of a given size.
 
@@ -25,7 +26,7 @@ def dominant_colors(image, num_colors, mask=None):
     else:
         data = np.reshape(image, (-1, 3))
 
-    # kmeans algorithm has inherent randomness - result will not be exactly the same 
+    # kmeans algorithm has inherent randomness - result will not be exactly the same
     # every time. Fairly consistent with >= 30 iterations
     centroids, labels = kmeans2(data, num_colors, iter=30)
     counts = np.histogram(labels, bins=range(0, num_colors + 1), normed=True)[0]

@@ -1,11 +1,12 @@
 import cv2
 import numpy as np
 
+
 def heatmap(grayscale_img):
-    color_img = np.tile(grayscale_img[:,:,np.newaxis], (1,1,3))
+    color_img = np.tile(grayscale_img[:, :, np.newaxis], (1, 1, 3))
 
     heat = np.linspace(64, 255, 5)
-    colors = np.array([[255, 0, 0], 
+    colors = np.array([[255, 0, 0],
                        [255, 255, 0],
                        [0, 255, 0],
                        [0, 255, 255],
@@ -16,8 +17,10 @@ def heatmap(grayscale_img):
 
     return color_img
 
+
 def chlorophyll_concentration(rgb_image):
-    return 255 - 0.5 * (rgb_image[:,:,1] + rgb_image[:,:,2])
+    return 255 - 0.5 * (rgb_image[:, :, 1] + rgb_image[:, :, 2])
+
 
 def scale_images_to_range(images, min_value, max_value, min_percentile=0, max_percentile=100):
     all_images = np.concatenate(images)

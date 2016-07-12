@@ -4,27 +4,17 @@ from skimage.graph import MCP_Geometric
 import os
 
 
-# hack to account for drawContours function not appearing to fill the contour
 def fillContours(image, contours):
-    cv2.drawContours(image, contours, contourIdx=-1, color=255, lineType=8, thickness=cv2.cv.CV_FILLED)
-
-    h, w = image.shape
-    outline = np.zeros((h + 2, w + 2), dtype='uint8')
-    outline[1:-1, 1:-1] = image
-
-    image = 255 * np.ones_like(image)
-    cv2.floodFill(image, outline, (0, 0), newVal=0)
-    return image
+    return cv2.drawContours(image, contours, contourIdx=-1, color=255, lineType=8, thickness=cv2.FILLED)
 
 
 def largest_components(binary_image, num_components=1, separate=False):
-    contours, hierarchy = cv2.findContours(binary_image.astype('uint8'), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-
+    binary_image, contours, hierarchy = cv2.findContours(binary_image.astype('uint8'), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     contours = sorted(contours, key=lambda contour: cv2.contourArea(contour), reverse=True)[:num_components]
 
     if separate:
         bounding_boxes = [cv2.boundingRect(c) for c in contours]
-        filled_images = [fillContours(np.zeros_like(binary_image), c)[bb[1]:(bb[1] + bb[3]), bb[0]:(bb[0] + bb[2])] for bb, c in zip(bounding_boxes, contours)]
+        filled_images = [fillContours(np.zeros_like(binary_image), [c])[bb[1]:(bb[1] + bb[3]), bb[0]:(bb[0] + bb[2])] for bb, c in zip(bounding_boxes, contours)]
         return filled_images, bounding_boxes, [cv2.contourArea(c) for c in contours]
     else:
         filled_image = fillContours(np.zeros_like(binary_image), contours)
@@ -32,7 +22,7 @@ def largest_components(binary_image, num_components=1, separate=False):
 
 
 def saliency_map(image):
-    hsv_image = cv2.cvtColor(image, cv2.cv.CV_BGR2HSV)
+    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     saliency = 0.25 * hsv_image[:, :, 2] + 0.75 * hsv_image[:, :, 1]
     return saliency.astype('float32')
 
@@ -88,7 +78,7 @@ def shortest_path(costs, start, end):
 
 
 def min_cost_cut(costs, start, end, seed_point, mask_cost=10):
-    cut_y, cut_x = shortest_path(costs*(mask_cost - 1) + 1, start, end)
+    cut_y, cut_x = shortest_path(costs * (mask_cost - 1) + 1, start, end)
 
     path_crop = np.zeros_like(costs)
     path_crop[cut_y, cut_x] = 255
@@ -164,10 +154,10 @@ def segment_image_file(file_in, folder_out):
     wing_mask = segment_wing(segmented_mask)[0] / 255
     file_out = os.path.join(folder_out, 'wings_' + filename)
     file_out = os.path.splitext(file_out)[0] + '.png'
-    cv2.imwrite(file_out, 255*wing_mask)
+    cv2.imwrite(file_out, 255 * wing_mask)
 
     body = np.greater(segmented_mask, wing_mask).astype('uint8')
-    body = largest_components(body*255, num_components=1)[0] / 255
+    body = largest_components(body * 255, num_components=1)[0] / 255
     file_out = os.path.join(folder_out, 'abdomen_' + filename)
     file_out = os.path.splitext(file_out)[0] + '.png'
-    cv2.imwrite(file_out, 255*body)
+    cv2.imwrite(file_out, 255 * body)
