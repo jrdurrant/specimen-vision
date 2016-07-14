@@ -1,11 +1,22 @@
 import unittest
-from vision.segmentation.segmentation import segment_butterfly_contour
-from vision.tests import get_test_image
+from nose_parameterized import parameterized
+from nose.tools import nottest
+from vision.measurements.alignment import align
+from vision.tests import get_test_image, get_test_folder_images
 
 
 class TestGlobalAlignment(unittest.TestCase):
-    def setUp(self):
-        pass
+    @classmethod
+    def setUpClass(self):
+        files = get_test_folder_images('ruler', 'measured')
+        images = [get_test_image(file) for file in files]
+        self.outlines = align(images)
 
-    def test_alignment(self):
-        pass
+    @nottest
+    def generate_test_files():
+        indices = range(len(get_test_folder_images('ruler', 'distorted')))
+        return [str(i) for i in indices]
+
+    @parameterized.expand(generate_test_files())
+    def test_alignment(self, index):
+        self.assertGreaterEqual(int(index), 0)
