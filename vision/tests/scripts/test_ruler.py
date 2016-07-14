@@ -1,7 +1,6 @@
-import cv2
 import csv
-import os
 import fnmatch
+import os
 import unittest
 import numpy as np
 from nose_parameterized import parameterized
@@ -9,7 +8,7 @@ from nose.tools import nottest
 from operator import itemgetter
 from vision.measurements.detect_ruler import ruler_scale_factor
 from vision.measurements.detect_ruler import remove_multiples
-from vision.tests import TEST_DATA
+from vision.tests import get_test_image, TEST_DATA
 
 
 folder_distort = os.path.join(TEST_DATA, 'ruler', 'distorted')
@@ -20,7 +19,7 @@ class TestTransforms(unittest.TestCase):
     scale_factor_base = 0
 
     def setUp(self):
-        image_base = cv2.imread(os.path.join(folder_distort, 'test.JPG'))
+        image_base = get_test_image('ruler', 'distorted', 'test.JPG')
         self.scale_factor_base = ruler_scale_factor(image_base, graduations=[1, 2, 20], distance=0.5)
 
     def tearDown(self):
@@ -33,7 +32,7 @@ class TestTransforms(unittest.TestCase):
 
     @parameterized.expand(generate_test_files())
     def test_transform(self, file):
-        image = cv2.imread(os.path.join(folder_distort, file))
+        image = get_test_image('ruler', 'distorted', file)
         scale_factor = ruler_scale_factor(image, graduations=[1, 2, 20], distance=0.5)
         self.assertAlmostEqual(self.scale_factor_base, scale_factor, delta=0.2)
 
@@ -54,7 +53,7 @@ class TestMeasured(unittest.TestCase):
 
     @parameterized.expand(generate_test_files())
     def test_measurement(self, file, separation):
-        image = cv2.imread(os.path.join(folder_measure, file))
+        image = get_test_image('ruler', 'measured', file)
         scale_factor = ruler_scale_factor(image, graduations=[1, 2, 20], distance=0.5)
         self.assertAlmostEqual(separation, 0.5 / scale_factor, delta=0.5)
 

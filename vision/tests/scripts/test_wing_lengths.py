@@ -1,9 +1,7 @@
-import cv2
-import os
 import unittest
 from vision.measurements.shape_analysis import wing_length
 from vision.segmentation.segmentation import segment_butterfly, segment_wing
-from vision.tests import TEST_DATA
+from vision.tests import get_test_image
 
 
 class TestWingLengths500606(unittest.TestCase):
@@ -12,7 +10,7 @@ class TestWingLengths500606(unittest.TestCase):
     centre_of_mass = None
 
     def setUp(self):
-        image = cv2.imread(os.path.join(TEST_DATA, 'BMNHE_500606.JPG'))
+        image = get_test_image('BMNHE_500606.JPG')
         segmented_image, segmented_mask = segment_butterfly(image, saliency_threshold=96)
         self.wing_mask, self.wing_paths, self.centre_of_mass = segment_wing(segmented_mask)
 

@@ -1,10 +1,9 @@
 import cv2
-import os
 import unittest
 import numpy as np
-from vision.segmentation.segmentation import saliency_map, largest_components
+from vision.segmentation.segmentation import segment_butterfly_contour
 from vision.measurements.landmarks import shape_context, cartesian_to_polar
-from vision.tests import TEST_DATA
+from vision.tests import get_test_image
 
 
 class TestShapeContextSimple(unittest.TestCase):
@@ -27,21 +26,17 @@ class TestShapeContextSimple(unittest.TestCase):
 
 class TestShapeContextImage(unittest.TestCase):
     def setUp(self):
-        image = cv2.imread(os.path.join(TEST_DATA, 'BMNHE_500606.JPG'))
-        saliency = saliency_map(image).astype(np.uint8)
-        _, binary_image = cv2.threshold(saliency, 128, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        self.outline = largest_components(binary_image, num_components=1)[0]
+        image = get_test_image('BMNHE_500606.JPG')
+        self.outline = segment_butterfly_contour(image)
 
     def tearDown(self):
         pass
 
     def test_shape_context(self):
-        image_flipped = cv2.imread(os.path.join(TEST_DATA, 'BMNHE_500606_flipped.JPG'))
-        saliency = saliency_map(image_flipped).astype(np.uint8)
-        _, binary_image = cv2.threshold(saliency, 128, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        outline_flipped = largest_components(binary_image, num_components=1)[0]
-        cv2.imwrite('b.png', self.outline.draw(image=np.zeros_like(binary_image), filled=True))
-        cv2.imwrite('b2.png', outline_flipped.draw(image=np.zeros_like(binary_image), filled=True))
+        image_flipped = get_test_image('BMNHE_500606_flipped.JPG')
+        outline_flipped = segment_butterfly_contour(image_flipped)
+        cv2.imwrite('b.png', self.outline.draw(image=np.zeros_like(image_flipped[:, :, 0]), filled=True))
+        cv2.imwrite('b2.png', outline_flipped.draw(image=np.zeros_like(image_flipped[:, :, 0]), filled=True))
         vertices = self.outline.points[:, 0, :]
         vertices_flipped = outline_flipped.points[:, 0, :]
         h = shape_context((2436, 1457),

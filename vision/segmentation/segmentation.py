@@ -20,15 +20,17 @@ def saliency_map(image):
     return saliency.astype('float32')
 
 
-def segment_butterfly(image, saliency_threshold=100, border=10):
-    image_height, image_width = image.shape[:2]
-
+def segment_butterfly_contour(image, saliency_threshold=100):
     saliency = saliency_map(image)
     blur = cv2.GaussianBlur(saliency, (5, 5), 0).astype(np.uint8)
     _, mask = cv2.threshold(blur, saliency_threshold, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
-    butterfly_contour = largest_components(mask, num_components=1)[0]
-    mask = butterfly_contour.draw(image=np.zeros_like(mask), filled=True)
+    return largest_components(mask, num_components=1)[0]
+
+
+def segment_butterfly(image, saliency_threshold=100, border=10):
+    butterfly_contour = segment_butterfly_contour(image, saliency_threshold)
+    mask = butterfly_contour.draw(image=np.zeros_like(image[:, :, 0]), filled=True)
 
     bounding_box = butterfly_contour.bounding_box
     bounding_box.grow(border)
