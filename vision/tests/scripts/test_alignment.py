@@ -4,5 +4,8 @@ from vision.tests import get_test_image
 
 
 class TestGlobalAlignment(unittest.TestCase):
+    def setUp(self):
+        pass
+
     def test_alignment(self):
         pass
