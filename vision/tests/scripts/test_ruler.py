@@ -12,12 +12,10 @@ from vision.tests import get_test_image, get_test_path, get_test_folder_images
 class TestTransforms(unittest.TestCase):
     scale_factor_base = 0
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(self):
         image_base = get_test_image('ruler', 'distorted', 'test.JPG')
         self.scale_factor_base = ruler_scale_factor(image_base, graduations=[1, 2, 20], distance=0.5)
-
-    def tearDown(self):
-        pass
 
     @nottest
     def generate_test_files():
