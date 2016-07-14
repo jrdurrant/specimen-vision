@@ -32,8 +32,7 @@ def segment_butterfly(image, saliency_threshold=100, border=10):
 
     bounding_box = butterfly_contour.bounding_box
     bounding_box.grow(border)
-    image_extents = Box(0, 0, image_width, image_height)
-    bounding_box &= image_extents
+    bounding_box &= Box.from_image(image)
 
     return image[bounding_box.indices], mask[bounding_box.indices].astype(np.uint8)
 

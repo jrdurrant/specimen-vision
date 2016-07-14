@@ -23,6 +23,11 @@ class Box(object):
     def shrink(self, value=0, top=0, right=0, bottom=0, left=0):
         self.grow(-value, -top, -right, -bottom, -left)
 
+    @classmethod
+    def from_image(cls, image):
+        height, width = image.shape[:2]
+        return cls(0, 0, width, height)
+
     @property
     def extents(self):
         return self.x + self.width, self.y + self.height
