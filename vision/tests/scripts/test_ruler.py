@@ -1,6 +1,4 @@
 import csv
-import fnmatch
-import os
 import unittest
 import numpy as np
 from nose_parameterized import parameterized
@@ -8,11 +6,7 @@ from nose.tools import nottest
 from operator import itemgetter
 from vision.measurements.detect_ruler import ruler_scale_factor
 from vision.measurements.detect_ruler import remove_multiples
-from vision.tests import get_test_image, TEST_DATA
-
-
-folder_distort = os.path.join(TEST_DATA, 'ruler', 'distorted')
-folder_measure = os.path.join(TEST_DATA, 'ruler', 'measured')
+from vision.tests import get_test_image, get_test_path, get_test_folder_images
 
 
 class TestTransforms(unittest.TestCase):
@@ -27,12 +21,11 @@ class TestTransforms(unittest.TestCase):
 
     @nottest
     def generate_test_files():
-        test_dir_files = os.listdir(folder_distort)
-        return sorted(fnmatch.filter(test_dir_files, '*.JPG'))
+        return get_test_folder_images('ruler', 'distorted')
 
     @parameterized.expand(generate_test_files())
     def test_transform(self, file):
-        image = get_test_image('ruler', 'distorted', file)
+        image = get_test_image(file)
         scale_factor = ruler_scale_factor(image, graduations=[1, 2, 20], distance=0.5)
         self.assertAlmostEqual(self.scale_factor_base, scale_factor, delta=0.2)
 
@@ -46,7 +39,7 @@ class TestMeasured(unittest.TestCase):
 
     @nottest
     def generate_test_files():
-        with open(os.path.join(folder_measure, 'data.csv'), 'r') as csv_file:
+        with open(get_test_path('ruler', 'measured', 'data.csv'), 'r') as csv_file:
             reader = csv.reader(csv_file, delimiter=' ')
             data = [(filename, float(separation)) for filename, separation in reader]
         return sorted(data, key=itemgetter(0))
