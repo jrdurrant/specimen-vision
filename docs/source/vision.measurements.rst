@@ -7,7 +7,6 @@ Submodules
 .. toctree::
 
    vision.measurements.detect_ruler
-   vision.measurements.landmarks
    vision.measurements.shape_analysis
 
 Module contents
