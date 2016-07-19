@@ -46,7 +46,7 @@ class TestMeasured(unittest.TestCase):
     def test_measurement(self, file, separation):
         image = get_test_image('ruler', 'measured', file)
         scale_factor = ruler_scale_factor(image, graduations=[1, 2, 20], distance=0.5)
-        self.assertAlmostEqual(separation, 0.5 / scale_factor, delta=0.5)
+        self.assertAlmostEqual(separation, 0.5 / scale_factor, delta=1)
 
 
 class TestRemoveMultiples(unittest.TestCase):
@@ -58,19 +58,19 @@ class TestRemoveMultiples(unittest.TestCase):
 
     def test_evens(self):
         evens = list(zip(range(2, 10, 2), range(2, 10, 2)))
-        evens_no_multiples = remove_multiples(evens)
+        evens_no_multiples = remove_multiples(evens, [1, 2, 3, 4, 5])
         self.assertEqual(evens_no_multiples, [(2, 2)])
 
     def test_evens_reverse(self):
         evens = list(zip(range(2, 10, 2), range(2, 10, 2)[::-1]))
-        evens_no_multiples = remove_multiples(evens)
+        evens_no_multiples = remove_multiples(evens, [1, 2, 3, 4, 5])
         self.assertEqual(evens_no_multiples, [(8, 2)])
 
     def test_random(self):
         indices = (np.random.rand(20) * 0.1 - 0.05) + np.random.randint(1, 10, 20)
         indices[0] = 1
         scores = list(zip(np.random.rand(10) * 10, indices))
-        scores_no_multiples = remove_multiples(scores)
+        scores_no_multiples = remove_multiples(scores, [1, 1])
         max_ratio = max(scores_no_multiples, key=itemgetter(1))[1]
         min_ratio = min(scores_no_multiples, key=itemgetter(1))[1]
         self.assertLessEqual(abs(max_ratio - 1), 1 + 0.05)
