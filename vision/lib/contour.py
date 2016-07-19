@@ -15,7 +15,7 @@ class Contour(object):
     def area(self):
         return cv2.contourArea(self.points)
 
-    def draw(self, filled=False, image=None, crop=False):
+    def draw(self, filled=False, image=None, crop=False, color=255):
         if image is None:
             width, height = self.bounding_box.extents
             image = np.zeros((height, width))
@@ -24,7 +24,7 @@ class Contour(object):
         filled_image = cv2.drawContours(image,
                                         [self.points],
                                         contourIdx=-1,
-                                        color=255,
+                                        color=color,
                                         lineType=8,
                                         thickness=cv2.FILLED)
 
