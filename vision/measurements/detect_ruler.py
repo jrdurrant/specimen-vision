@@ -10,6 +10,7 @@ from scipy.stats import entropy
 from vision import Ruler
 from sklearn.cluster import KMeans
 from scipy.ndimage import find_objects
+from skimage.filters import threshold_otsu
 
 
 logging.basicConfig(filename='ruler.log',
@@ -34,18 +35,26 @@ def remove_blocks(binary_image, min_size=10):
     return np.clip(binary_image_blocks_removed, 0, 1)
 
 
-def threshold(image):
+def threshold(image, mask=None):
     """Convert a full color image to a binary image
 
     Args:
         image (ndarray): BGR image of shape n x m x 3.
+        mask (ndarray): binary image. Calculates threshold value based only on pixels within the mask.
+                        However, all pixels are included in the output image.
 
     Returns:
         ndarray: Binary image of shape n x m, where 0 is off and 255 is on.
 
     """
-    threshold_val, binary_image = cv2.threshold(image[:, :, 1], 192, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    return binary_image
+    if mask is not None:
+        input_image = image[:, :, 1]
+        input_image = input_image[mask > 0].reshape(-1, 1)
+    else:
+        input_image = image[:, :, 1]
+
+    threshold_val = threshold_otsu(input_image)
+    return np.where(image[:, :, 1] > threshold_val, 255, 0)
 
 
 def find_edges(binary_ruler_image):
