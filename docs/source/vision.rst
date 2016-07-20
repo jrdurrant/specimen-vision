@@ -11,6 +11,7 @@ Subpackages
     vision.lib
     vision.marking_detection
     vision.measurements
+    vision.ruler_detection
     vision.segmentation
 
 Submodules
