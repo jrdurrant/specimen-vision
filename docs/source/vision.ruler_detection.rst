@@ -7,6 +7,7 @@ Submodules
 .. toctree::
 
    vision.ruler_detection.detect_ruler
+   vision.ruler_detection.hough_space
 
 Module contents
 ---------------

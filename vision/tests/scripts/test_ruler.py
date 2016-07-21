@@ -4,8 +4,7 @@ import numpy as np
 from nose_parameterized import parameterized
 from nose.tools import nottest
 from operator import itemgetter
-from vision.ruler_detection.detect_ruler import ruler_scale_factor
-from vision.ruler_detection.detect_ruler import remove_multiples
+from vision.ruler_detection.find_scale import ruler_scale_factor, remove_multiples
 from vision.tests import get_test_image, get_test_path, get_test_folder_images
 
 

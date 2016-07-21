@@ -1,4 +1,3 @@
-from skimage.transform import hough_line
 from skimage.morphology import skeletonize
 import cv2
 import logging
@@ -6,11 +5,11 @@ import numpy as np
 from statsmodels.tsa.stattools import acf
 from operator import itemgetter
 from vision.segmentation.segmentation import largest_components
-from scipy.stats import entropy
 from vision import Ruler
 from sklearn.cluster import KMeans
 from scipy.ndimage import find_objects
 from skimage.filters import threshold_otsu
+from vision.ruler_detection.hough_space import best_angle, hough_transform, get_hspace_features
 
 
 logging.basicConfig(filename='ruler.log',
@@ -92,24 +91,6 @@ def fill_gaps(edges, iterations=1):
         edges = cv2.dilate(edges, kernel)
         edges = skeletonize(edges) * 1.0
     return edges * 255.0
-
-
-def hough_transform(binary_image):
-    """Compute a Hough Transform on a binary image to detect straight lines
-
-    Args:
-        binary_image: 2D image, where 0 is off and 255 is on.
-
-    Returns:
-        (ndarray, array, array): Bins, angles, distances
-                 Values of the bins after the Hough Transform, where the value at (i, j)
-                 is the number of 'votes' for a straight line with distance[i] perpendicular to the origin
-                 and at angle[j]. Also returns the corresponding array of angles and the corresponding array
-                 of distances.
-
-    """
-    hspace, angles, distances = hough_line(binary_image, theta=np.linspace(0, np.pi, 180, endpoint=False))
-    return hspace.astype(np.float32), angles, distances
 
 
 def remove_multiples(scores, ratios, threshold=0.05):
@@ -200,53 +181,6 @@ def find_grid(hspace_angle, max_separation, graduations):
     return best_separation[0][1]
 
 
-def var_freq(values, freq):
-    """Compute variance from values and their frequencies
-
-    Args:
-        values (array): 1-d array of values
-        freq (array): Frequency of occurence in the data of the corresponding value
-    Returns:
-        float32: Variance of the data
-    """
-    mean_value = np.sum(values * freq) / (np.sum(freq))
-    return np.mean(np.power(values - mean_value, 2) * freq)
-
-
-def best_angle(features, feature_range):
-    """Return the angle most likely to represent a ruler's graduation, given the bins resulting from a
-    Hough Transform.
-
-    Args:
-        features: Feature vector describing the bins returned after the Hough Transform.
-        feature_range: Range of the values of the features, given feature vectors for all candidate rulers.
-
-    Returns:
-        (int, float): The best angle index and its score, for the given features.
-
-    Note:
-        The returned angle index refers to an element in an angles array, and not the actual angle value.
-
-    """
-    num_features = len(features)
-    for i in range(num_features):
-        features[i] = (features[i] - feature_range[i][0]) / (feature_range[i][1] - feature_range[i][0])
-
-    spread = features[0] - features[1]
-    spread[(features[0] == 0) & (features[1] == 0)] = np.min(spread) - 1
-
-    spread_global = np.zeros_like(spread)
-    num_angles = spread.size
-    weight = np.arange(num_angles) * np.arange(num_angles)[::-1]
-    weight = weight.astype(np.float32) / np.max(weight)
-    total_weight = np.sum(weight)
-    for i in range(num_angles):
-        current_weight = np.roll(weight, i)
-        spread_global[i] = spread[i] - np.sum(spread * current_weight) / total_weight
-
-    return np.argmax(spread_global), np.max(spread_global)
-
-
 def candidate_rulers(binary_image, n=10, output_images=False):
     """Return a list of potential locations for rulers in a binary image.
 
@@ -269,28 +203,6 @@ def candidate_rulers(binary_image, n=10, output_images=False):
         return rulers, [c.draw(filled=True) for c in candidate_components]
     else:
         return rulers
-
-
-def get_hspace_features(hspace, distances):
-    """Compute the features describing the Hough Transform bins.
-
-    Args:
-        hspace: Bins outputted from :py:meth:`hough_transform`.
-        distances: Array of distances corresponding to the 2D hspace array.
-
-    Returns:
-        [float, float]: The variance and entropy of each angle, using all distances.
-
-    """
-    num_angles = hspace.shape[1]
-    sample_variance = np.zeros(num_angles)
-    sample_entropy = np.zeros(num_angles)
-    for i in range(num_angles):
-        nz = np.nonzero(hspace[:, i])[0]
-        if nz.size > 1:
-            sample_variance[i] = var_freq(distances[nz[0]:nz[-1]], hspace[nz[0]:nz[-1], i])
-            sample_entropy[i] = entropy(hspace[nz[0]:nz[-1], i])
-    return [sample_variance, sample_entropy]
 
 
 def find_ruler(binary_image, num_candidates):
@@ -330,7 +242,8 @@ def find_ruler(binary_image, num_candidates):
     for i, ruler in enumerate(rulers):
         if rulers[i] > rulers[best_ruler]:
             best_ruler = i
-    logging.info('Best ruler angle index is {}, score is {}'.format(rulers[best_ruler].angle_index, rulers[best_ruler].score))
+    logging.info('Best ruler angle index is {}, score is {}'.format(rulers[best_ruler].angle_index,
+                                                                    rulers[best_ruler].score))
 
     return max(rulers)
 

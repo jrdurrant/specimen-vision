@@ -24,7 +24,7 @@ A simple example is given of how this might be used, with the parameters being a
 ..  code:: python
 
 	import cv2
-	from vision.measurements.detect_ruler import ruler_scale_factor
+	from vision.ruler_detection.find_scale import ruler_scale_factor
 
 	image = cv2.imread('specimen_image.jpg')
 	scale_factor = ruler_scale_factor(image, graduations=[1, 2, 20], distance=0.5)
