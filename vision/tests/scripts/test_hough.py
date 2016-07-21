@@ -29,10 +29,9 @@ class TestCorrectness(unittest.TestCase):
 
     @nottest
     def generate_test_files():
-        return ['{:02d}'.format(i) for i in range(5, 100)]
+        return zip(range(5, 100))
 
     @parameterized.expand(generate_test_files())
     def test_vs_reference(self, length):
-        array_length = int(length)
-        array = np.random.randint(0, 100000, array_length)
+        array = np.random.randint(0, 100000, length)
         self.assertAlmostEquals(average_local_entropy(array), average_local_entropy_reference(array))
