@@ -37,8 +37,10 @@ class TestMeasured(unittest.TestCase):
     @nottest
     def generate_test_files():
         with open(get_test_path('ruler', 'measured', 'data.csv'), 'r') as csv_file:
-            reader = csv.reader(csv_file, delimiter=' ')
-            data = [(filename, float(separation)) for filename, separation in reader]
+            reader = csv.DictReader(csv_file, delimiter=' ')
+            data = [(row['filename'], float(row['graduation_distance']))
+                    for row
+                    in reader]
         return sorted(data, key=itemgetter(0))
 
     @parameterized.expand(generate_test_files())

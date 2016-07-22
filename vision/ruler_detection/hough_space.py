@@ -28,7 +28,14 @@ def average_local_entropy(arr, window_size=2):
 
 
 def hspace_angle_features(distance_bins, distances):
-    return var_freq(distances, distance_bins), average_local_entropy(distance_bins)
+    non_zero_indices = np.nonzero(distance_bins)[0]
+    if non_zero_indices.size > 10:
+        non_zero_distance_bins = distance_bins[non_zero_indices[0]:non_zero_indices[-1]]
+        non_zero_distances = distances[non_zero_indices[0]:non_zero_indices[-1]]
+        return (var_freq(non_zero_distances, non_zero_distance_bins),
+                average_local_entropy(non_zero_distance_bins))
+    else:
+        return np.nan, np.nan
 
 
 def hspace_angle_scale(distance_bins, distances, splits=2):
@@ -45,9 +52,7 @@ def hspace_angle_scale(distance_bins, distances, splits=2):
 
 def hspace_features(hspace, distances, splits=2):
     num_angles = hspace.shape[1]
-    return list(itertools.chain(*(hspace_angle_scale(hspace[:, i], distances, splits)
-                                for i
-                                in range(num_angles))))
+    return [hspace_angle_scale(hspace[:, i], distances, splits) for i in range(num_angles)]
 
 
 def hough_transform(binary_image):
@@ -135,3 +140,21 @@ def get_hspace_features(hspace, distances):
             sample_variance[i] = var_freq(distances[nz[0]:nz[-1]], hspace[nz[0]:nz[-1], i])
             sample_entropy[i] = entropy(hspace[nz[0]:nz[-1], i])
     return [sample_variance, sample_entropy]
+
+
+def grid_hough_space(binary_image, grid=8):
+    hough_spaces = [[[] for i in range(grid)] for i in range(grid)]
+
+    height, width = binary_image.shape
+    grid_height = np.ceil(height / grid)
+    grid_width = np.ceil(width / grid)
+
+    for i in range(grid):
+        for j in range(grid):
+            grid_i = slice(i * grid_height, (i + 1) * grid_height)
+            grid_j = slice(j * grid_width, (j + 1) * grid_width)
+            hough_space = hough_transform(binary_image[grid_i, grid_j])
+            features = np.array(hspace_features(hough_space[0], hough_space[2], splits=4))
+            hough_spaces[i][j] = features
+
+    return hough_spaces
