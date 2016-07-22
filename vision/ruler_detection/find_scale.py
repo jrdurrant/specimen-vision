@@ -178,7 +178,7 @@ def find_grid(hspace_angle, max_separation, graduations):
     for s in best_separation:
         logging.info(s)
 
-    return best_separation[0]
+    return best_separation[0][1]
 
 
 def candidate_rulers(binary_image, n=10, output_images=False):
