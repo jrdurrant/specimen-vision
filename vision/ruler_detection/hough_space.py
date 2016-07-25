@@ -149,6 +149,8 @@ def grid_hough_space(binary_image, grid=8):
     grid_height = np.ceil(height / grid)
     grid_width = np.ceil(width / grid)
 
+    grid_sum = np.zeros((grid, grid))
+
     for i in range(grid):
         for j in range(grid):
             grid_i = slice(i * grid_height, (i + 1) * grid_height)
@@ -156,5 +158,6 @@ def grid_hough_space(binary_image, grid=8):
             hough_space = hough_transform(binary_image[grid_i, grid_j])
             features = np.array(hspace_features(hough_space[0], hough_space[2], splits=4))
             hough_spaces[i][j] = features
+            grid_sum[i, j] = np.sum(binary_image[grid_i, grid_j])
 
-    return hough_spaces
+    return hough_spaces, grid_sum

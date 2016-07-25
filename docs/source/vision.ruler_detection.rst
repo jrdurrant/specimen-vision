@@ -6,6 +6,7 @@ Submodules
 
 .. toctree::
 
+   vision.ruler_detection.find_ruler
    vision.ruler_detection.find_scale
    vision.ruler_detection.hough_space
 
