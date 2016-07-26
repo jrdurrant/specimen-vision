@@ -1,7 +1,10 @@
-import itertools
 import numpy as np
 from scipy.stats import entropy
 from skimage.transform import hough_line
+
+
+def average_local_entropy_pyramid(arr, levels):
+    pass
 
 
 def average_local_entropy(arr, window_size=2):
@@ -14,48 +17,41 @@ def average_local_entropy(arr, window_size=2):
     if np.min(arr) < 0:
         raise ValueError("all elements of array must be posiive")
     arr = 1.0 * arr / np.sum(arr)
-    log_arr = np.log(arr)
-    log_arr = np.where(np.isinf(log_arr), 0, log_arr)
+    log_arr = np.where(arr <= 0, 0, np.log(arr))
 
     kernel = np.ones(2 * window_size + 1)
     local_entropy_unnormalized = np.convolve(-arr * log_arr, kernel, mode='valid')
     local_sum = np.convolve(arr, kernel, mode='valid')
-    local_entropy = (local_entropy_unnormalized / local_sum) + np.log(local_sum)
-
-    local_entropy = np.where(local_sum == 0, 0, local_entropy)
+    local_entropy = np.where(local_sum == 0, 0, (local_entropy_unnormalized / local_sum) + np.log(local_sum))
 
     return np.sum(local_entropy) / arr.size
 
 
-def hspace_angle_features(distance_bins, distances):
+def hspace_angle_score(distance_bins):
     non_zero_indices = np.nonzero(distance_bins)[0]
     if non_zero_indices.size > 10:
         non_zero_distance_bins = distance_bins[non_zero_indices[0]:non_zero_indices[-1]]
-        non_zero_distances = distances[non_zero_indices[0]:non_zero_indices[-1]]
-        return (var_freq(non_zero_distances, non_zero_distance_bins),
-                average_local_entropy(non_zero_distance_bins))
+        return average_local_entropy(non_zero_distance_bins)
     else:
-        return np.nan, np.nan
+        return np.nan
 
 
-def hspace_angle_scale(distance_bins, distances, splits=2):
+def hspace_angle_scale(distance_bins, splits=2):
     if splits <= 1:
-        return hspace_angle_features(distance_bins, distances)
+        return [hspace_angle_score(distance_bins)]
     else:
-        split_arrays = zip(np.array_split(distance_bins, splits), np.array_split(distances, splits))
-        downscaled_features = (hspace_angle_scale(bins_split, distances_split, splits / 2)
-                               for bins_split, distances_split
-                               in split_arrays)
-        current_level_features = hspace_angle_features(distance_bins, distances)
-        return tuple(itertools.chain(*downscaled_features)) + current_level_features
+        bins_split = np.array_split(distance_bins, 2)
+        downscaled_scores = [score for bins in bins_split for score in hspace_angle_scale(bins, splits / 2)]
+        current_level_score = hspace_angle_score(distance_bins)
+        return downscaled_scores + [current_level_score]
 
 
-def hspace_features(hspace, distances, splits=2):
+def hspace_features(hspace, splits=2):
     num_angles = hspace.shape[1]
-    return [hspace_angle_scale(hspace[:, i], distances, splits) for i in range(num_angles)]
+    return [hspace_angle_scale(hspace[:, i], splits) for i in range(num_angles)]
 
 
-def hough_transform(binary_image):
+def hough_transform(binary_image, theta=np.linspace(0, np.pi, 180, endpoint=False)):
     """Compute a Hough Transform on a binary image to detect straight lines
 
     Args:
@@ -69,7 +65,7 @@ def hough_transform(binary_image):
                  of distances.
 
     """
-    hspace, angles, distances = hough_line(binary_image, theta=np.linspace(0, np.pi, 180, endpoint=False))
+    hspace, angles, distances = hough_line(binary_image, theta)
     return hspace.astype(np.float32), angles, distances
 
 
@@ -142,22 +138,24 @@ def get_hspace_features(hspace, distances):
     return [sample_variance, sample_entropy]
 
 
-def grid_hough_space(binary_image, grid=8):
-    hough_spaces = [[[] for i in range(grid)] for i in range(grid)]
+def grid_hspace_features(binary_image, grid=8):
+    levels = 4
+    num_angles = 180
+    grid_local_entropy = np.zeros((grid, grid, num_angles, np.power(2, levels) - 1))
 
     height, width = binary_image.shape
-    grid_height = np.ceil(height / grid)
-    grid_width = np.ceil(width / grid)
+    grid_height = int(np.ceil(height / grid))
+    grid_width = int(np.ceil(width / grid))
 
-    grid_sum = np.zeros((grid, grid))
+    grid_sum_edges = np.zeros((grid, grid))
 
     for i in range(grid):
         for j in range(grid):
             grid_i = slice(i * grid_height, (i + 1) * grid_height)
             grid_j = slice(j * grid_width, (j + 1) * grid_width)
             hough_space = hough_transform(binary_image[grid_i, grid_j])
-            features = np.array(hspace_features(hough_space[0], hough_space[2], splits=4))
-            hough_spaces[i][j] = features
-            grid_sum[i, j] = np.sum(binary_image[grid_i, grid_j])
+            features = np.array(hspace_features(hough_space[0], splits=np.power(2, levels - 1)))
+            grid_local_entropy[i, j, :, :] = features
+            grid_sum_edges[i, j] = np.sum(binary_image[grid_i, grid_j])
 
-    return hough_spaces, grid_sum
+    return grid_local_entropy, grid_sum_edges

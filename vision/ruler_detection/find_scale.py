@@ -9,7 +9,10 @@ from vision import Ruler
 from sklearn.cluster import KMeans
 from scipy.ndimage import find_objects
 from skimage.filters import threshold_otsu
-from vision.ruler_detection.hough_space import best_angle, hough_transform, get_hspace_features
+from vision.ruler_detection.hough_space import hough_transform, hspace_features
+from vision.ruler_detection.find_ruler import find_ruler, best_angles
+
+import matplotlib.pyplot as plt
 
 
 logging.basicConfig(filename='ruler.log',
@@ -106,7 +109,8 @@ def remove_multiples(scores, ratios, threshold=0.05):
         multiple = False
         for j in range(i):
             ratio = scores[i][1] / scores[j][1]
-            for r in ratios[1:]:
+            # hack. not sure ratio actually matters
+            for r in [1]:
                 remainder = abs(ratio % r)
                 if remainder > (r - 0.5):
                     remainder = abs(remainder - r)
@@ -155,6 +159,10 @@ def find_grid(hspace_angle, max_separation, graduations):
     ratios = np.array(graduations) / (1.0 * graduations[0])
 
     autocorrelation = acf(hspace_angle, nlags=max_separation, unbiased=True)
+
+    # size of autocorrelation output array can be less than max_separation if hspace_angle array is small
+    max_separation = min(max_separation, autocorrelation.size - 1)
+
     min_size = find_first_minimum(autocorrelation)
     logging.info('Min size between graduations is {}'.format(min_size))
 
@@ -163,6 +171,9 @@ def find_grid(hspace_angle, max_separation, graduations):
     uniform_separations = np.arange(max_separation + 1)
     offset_separations = separations[:, np.newaxis] * ratios[np.newaxis, :]
     score = np.sum(np.interp(offset_separations, uniform_separations, autocorrelation), axis=1)
+
+    plt.plot(separations, score)
+    plt.show()
 
     num_scores = ratios.size * 4
     best_scores = np.argsort(score)[-num_scores:]
@@ -203,49 +214,6 @@ def candidate_rulers(binary_image, n=10, output_images=False):
         return rulers, [c.draw(filled=True) for c in candidate_components]
     else:
         return rulers
-
-
-def find_ruler(binary_image, num_candidates):
-    """Return the location of a ruler in an image.
-
-    Args:
-        binary_image: 2D Binary image, where 0 is off and 255 is on.
-        num_candidates: Number of candidate rulers to assess. This should be able to be low (<5), but higher
-                        values allow for a more thorough search.
-
-    Returns:
-        Ruler: The most likely candidate :py:class:`Ruler`.
-
-    """
-    rulers, images = candidate_rulers(binary_image, num_candidates, output_images=True)
-
-    for ruler, image in zip(rulers, images):
-        binary_ruler_image = (image / 255.0) * binary_image[ruler.indices]
-        edges = fill_gaps(find_edges(binary_ruler_image))
-        hspace, angles, distances = hough_transform(edges)
-        ruler.hspace = hspace
-        ruler.angles = angles
-        ruler.distances = distances
-
-    features_ruler = [get_hspace_features(r.hspace, r.distances) for r in rulers]
-    features_separate = list(zip(*features_ruler))
-    features = [np.concatenate(feature) for feature in features_separate]
-    feature_range = [(np.min(f), np.max(f)) for f in features]
-
-    for i, ruler in enumerate(rulers):
-        angle_index, angle_score = best_angle(features_ruler[i], feature_range)
-        ruler.score = angle_score
-        ruler.angle_index = angle_index
-        logging.info('Ruler angle index is {}, score is {}'.format(angle_index, angle_score))
-
-    best_ruler = 0
-    for i, ruler in enumerate(rulers):
-        if rulers[i] > rulers[best_ruler]:
-            best_ruler = i
-    logging.info('Best ruler angle index is {}, score is {}'.format(rulers[best_ruler].angle_index,
-                                                                    rulers[best_ruler].score))
-
-    return max(rulers)
 
 
 def find_grid_from_ruler(ruler):
@@ -401,6 +369,19 @@ def restrict_search_space(binary_image, ruler):
     return crop_to_ruler(binary_image, ruler)
 
 
+def remove_large_components(binary_image, threshold_size=0):
+    if threshold_size == 0:
+        threshold_size = max(binary_image.shape)
+
+    num_labels, labels = cv2.connectedComponents(binary_image.astype(np.uint8))
+    sizes = np.bincount(labels.flatten())
+    num_oversize = np.sum(sizes > threshold_size)
+    oversize_labels = np.argsort(sizes)[:-num_oversize:-1]
+
+    for label in oversize_labels:
+        binary_image[labels == label] = 0
+
+
 def ruler_scale_factor(image, graduations, distance=1):
     """Returns the scale factor to convert from image coordinates to real world coordinates
 
@@ -414,18 +395,30 @@ def ruler_scale_factor(image, graduations, distance=1):
         float: Unitless scale factor from image coordinates to real world coordinates.
 
     """
-    binary_image = threshold(image) / 255
+    original_height, original_width = image.shape[:2]
+    image = resize_max(image, 2000)
+    distance *= image.shape[0] / original_height
 
-    ruler = find_ruler(binary_image, num_candidates=10)
-    binary_image_cropped = restrict_search_space(binary_image, ruler)
-    ruler = find_ruler(binary_image_cropped, num_candidates=10)
+    height, width = image.shape[:2]
+    image, mask = find_ruler(image)
+    binary_image = mask * threshold(image, mask)
+
+    if binary_image[mask].mean() > 128:
+        binary_image[mask] = 255 - binary_image[mask]
+    cv2.imwrite('binary_image.png', binary_image)
+    remove_large_components(binary_image, max(height, width))
+    cv2.imwrite('binary_image_reduced.png', binary_image)
+    edges = find_edges(255 - binary_image)
+    cv2.imwrite('edges.png', edges * 255)
+    hspace, angles, distances = hough_transform(edges)
+    features = hspace_features(hspace, splits=16)
+    angle_index = best_angles(np.array(features))
 
     distance *= graduations[0]
-    ruler.graduations = np.array(graduations) / graduations[0]
+    graduations = np.array(graduations) / graduations[0]
 
-    find_grid_from_ruler(ruler)
-
-    line_separation_pixels = ruler.separation
+    max_graduation_size = int(max(image.shape))
+    line_separation_pixels = find_grid(hspace[:, angle_index], max_graduation_size, graduations)
 
     logging.info('Line separation: {:.3f}'.format(line_separation_pixels))
     return distance / line_separation_pixels
