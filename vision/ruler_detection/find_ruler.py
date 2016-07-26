@@ -3,6 +3,7 @@ import cv2
 from scipy.sparse.csgraph import connected_components
 from vision.ruler_detection.hough_space import grid_hspace_features
 from skimage.feature import canny
+from skimage.measure import regionprops
 
 
 def crop_boolean_array(arr):
@@ -14,7 +15,7 @@ def crop_boolean_array(arr):
 
 def find_edges(image):
     image_single_channel = image[:, :, 1]
-    return canny(image_single_channel, sigma=2)
+    return canny(image_single_channel, sigma=3)
 
 
 def best_angles(hspace_entropy):
@@ -25,31 +26,19 @@ def best_angles(hspace_entropy):
 
 def find_ruler(image):
     binary_image = find_edges(image) * 255
-    cv2.imwrite('binary_image2.png', binary_image)
     hough_spaces, grid_sum = grid_hspace_features(binary_image, grid=16)
-
-    grid_size = hough_spaces.shape[0]
 
     angle_indices = best_angles(hough_spaces)
 
     labels = merge_cells(angle_indices)
-    n_components = np.max(labels + 1)
 
-    sizes = [np.sum(grid_sum[labels == i])
-             for i
-             in range(n_components)]
+    label_props = regionprops(labels)
+    sizes = [prop.filled_area * prop.eccentricity for prop in label_props]
     order = np.argsort(sizes)[::-1]
 
     height, width = binary_image.shape
-    grid_height = int(np.ceil(height / grid_size))
-    grid_width = int(np.ceil(width / grid_size))
-    mask = np.zeros((height, width), dtype=np.bool)
-    for i in range(grid_size):
-        for j in range(grid_size):
-            grid_i = slice(i * grid_height, (i + 1) * grid_height)
-            grid_j = slice(j * grid_width, (j + 1) * grid_width)
-            if labels[i, j] == order[0]:
-                mask[grid_i, grid_j] = True
+    label_image_size = cv2.resize(labels, (width, height), interpolation=cv2.INTER_NEAREST)
+    mask = label_image_size == label_props[order[0]].label
 
     crop = crop_boolean_array(mask)
     return image[crop], mask[crop]
@@ -57,9 +46,9 @@ def find_ruler(image):
 
 def merge_cells(angle_indices):
     def connection(index_a, index_b):
-        if index_a >= 0 and index_b >= 0:
+        if (index_a == 0 or index_a == 2) and (index_b == 0 or index_b == 2):
             angle_difference = min((index_a - index_b) % 180, (index_b - index_a) % 180)
-            return abs(angle_difference) <= 5
+            return abs(angle_difference) <= 0
         else:
             return False
 
@@ -84,4 +73,4 @@ def merge_cells(angle_indices):
                 graph[index, np.ravel_multi_index((i, j + 1), (grid_size, grid_size))] = 1
 
     n_components, labels = connected_components(graph, directed=False, return_labels=True)
-    return labels.reshape(grid_size, grid_size)
+    return (labels + 1).reshape(grid_size, grid_size)

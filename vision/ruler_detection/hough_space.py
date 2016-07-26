@@ -1,10 +1,5 @@
 import numpy as np
-from scipy.stats import entropy
 from skimage.transform import hough_line
-
-
-def average_local_entropy_pyramid(arr, levels):
-    pass
 
 
 def average_local_entropy(arr, window_size=2):
@@ -51,7 +46,7 @@ def hspace_features(hspace, splits=2):
     return [hspace_angle_scale(hspace[:, i], splits) for i in range(num_angles)]
 
 
-def hough_transform(binary_image, theta=np.linspace(0, np.pi, 180, endpoint=False)):
+def hough_transform(binary_image, theta=np.linspace(0, np.pi / 2, 3, endpoint=True)):
     """Compute a Hough Transform on a binary image to detect straight lines
 
     Args:
@@ -67,19 +62,6 @@ def hough_transform(binary_image, theta=np.linspace(0, np.pi, 180, endpoint=Fals
     """
     hspace, angles, distances = hough_line(binary_image, theta)
     return hspace.astype(np.float32), angles, distances
-
-
-def var_freq(values, freq):
-    """Compute variance from values and their frequencies
-
-    Args:
-        values (array): 1-d array of values
-        freq (array): Frequency of occurence in the data of the corresponding value
-    Returns:
-        float32: Variance of the data
-    """
-    mean_value = np.sum(values * freq) / (np.sum(freq))
-    return np.mean(np.power(values - mean_value, 2) * freq)
 
 
 def best_angle(features, feature_range):
@@ -116,31 +98,9 @@ def best_angle(features, feature_range):
     return np.argmax(spread_global), np.max(spread_global)
 
 
-def get_hspace_features(hspace, distances):
-    """Compute the features describing the Hough Transform bins.
-
-    Args:
-        hspace: Bins outputted from :py:meth:`hough_transform`.
-        distances: Array of distances corresponding to the 2D hspace array.
-
-    Returns:
-        [float, float]: The variance and entropy of each angle, using all distances.
-
-    """
-    num_angles = hspace.shape[1]
-    sample_variance = np.zeros(num_angles)
-    sample_entropy = np.zeros(num_angles)
-    for i in range(num_angles):
-        nz = np.nonzero(hspace[:, i])[0]
-        if nz.size > 1:
-            sample_variance[i] = var_freq(distances[nz[0]:nz[-1]], hspace[nz[0]:nz[-1], i])
-            sample_entropy[i] = entropy(hspace[nz[0]:nz[-1], i])
-    return [sample_variance, sample_entropy]
-
-
-def grid_hspace_features(binary_image, grid=8):
+def grid_hspace_features(binary_image, grid=8, theta=np.linspace(0, np.pi / 2, 3, endpoint=True)):
     levels = 4
-    num_angles = 180
+    num_angles = theta.size
     grid_local_entropy = np.zeros((grid, grid, num_angles, np.power(2, levels) - 1))
 
     height, width = binary_image.shape
@@ -153,7 +113,7 @@ def grid_hspace_features(binary_image, grid=8):
         for j in range(grid):
             grid_i = slice(i * grid_height, (i + 1) * grid_height)
             grid_j = slice(j * grid_width, (j + 1) * grid_width)
-            hough_space = hough_transform(binary_image[grid_i, grid_j])
+            hough_space = hough_transform(binary_image[grid_i, grid_j], theta=theta)
             features = np.array(hspace_features(hough_space[0], splits=np.power(2, levels - 1)))
             grid_local_entropy[i, j, :, :] = features
             grid_sum_edges[i, j] = np.sum(binary_image[grid_i, grid_j])
