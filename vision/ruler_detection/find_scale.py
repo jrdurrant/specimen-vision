@@ -4,8 +4,9 @@ from statsmodels.tsa.stattools import acf
 from vision.ruler_detection.hough_space import hough_transform, hspace_features
 from vision.ruler_detection.find_ruler import find_ruler, best_angles
 import peakutils
+from skimage.morphology import skeletonize
 from scipy.ndimage.filters import gaussian_filter1d
-from vision.image_functions import threshold, remove_large_components, find_edges
+from vision.image_functions import threshold, remove_large_components
 
 
 logging.basicConfig(filename='ruler.log',
@@ -33,7 +34,6 @@ def find_grid(hspace_angle, max_separation):
     smooth = gaussian_filter1d(autocorrelation, 1)
     peaks = peakutils.indexes(smooth, thres=0.25)
 
-    # return best_separation[0][1]
     return np.mean(np.diff(np.insert(peaks[:4], 0, 0)))
 
 
@@ -55,10 +55,10 @@ def ruler_scale_factor(image, graduations, distance=1):
     image, mask = find_ruler(image)
     binary_image = mask * threshold(image, mask)
 
-    if binary_image[mask].mean() > 128:
-        binary_image[mask] = 255 - binary_image[mask]
+    if binary_image[mask].mean() > 0.5:
+        binary_image[mask] = ~binary_image[mask]
     remove_large_components(binary_image, max(height, width))
-    edges = find_edges(255 - binary_image)
+    edges = skeletonize(binary_image)
     hspace, angles, distances = hough_transform(edges)
     features = hspace_features(hspace, splits=16)
     angle_index = best_angles(np.array(features))

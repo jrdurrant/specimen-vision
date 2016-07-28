@@ -19,6 +19,7 @@ Submodules
 
 .. toctree::
 
+   vision.image_functions
    vision.io_functions
 
 Module contents
