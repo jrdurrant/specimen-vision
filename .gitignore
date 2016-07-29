@@ -14,5 +14,9 @@
 *.svg
 !docs/images/*.svg
 
+vision/tests/test_data/wing_area/cropped/*.csv
+
+*.blend*
+
 .DS_Store
 docs/_build/*
