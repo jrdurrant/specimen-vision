@@ -12,10 +12,9 @@ def learn(points, K=1):
 
     U, L2, _ = np.linalg.svd(np.dot(W, W.T))
 
-    D = 22
-    K = 1
+    D = mu.shape[0]
     sigma2 = np.sum(L2[(K + 1):(D + 1)]) / (D - K)
-    phi = np.dot(U[:, :K], np.sqrt(np.diag(L2[:K]) - sigma2 * np.eye(K)))
+    phi = U[:, :K] @ np.sqrt(np.diag(L2[:K]) - sigma2 * np.eye(K))
     return mu, phi, sigma2
 
 
@@ -40,18 +39,16 @@ def update_h(sigma2, phi, y, mu, psi):
 
 
 def infer(edge_image, mu, phi, sigma2):
-    edge_points = np.array(np.where(edge_image)).T
+    edge_points = np.array(np.where(edge_image[::-1, :])).T
     edge_points[:, [0, 1]] = edge_points[:, [1, 0]]
-    edge_points[:, 1] = 90 - edge_points[:, 1]
 
-    # src = np.zeros((11, 2))
-    # src[:, 0] = np.arange(-5, 6)
-    # src[:, 1] = np.power(src[:, 0], 2)
-    # edge_points = src
+    translation_estimate = edge_image.shape[1] / 2, edge_image.shape[0] / 2
+    scale_estimate = min(edge_image.shape) / 2
 
     edge_nn = NearestNeighbors(n_neighbors=1).fit(edge_points)
     h = np.zeros((phi.shape[1], 1))
-    psi = SimilarityTransform(scale=3, translation=(50, 0))
+    psi = SimilarityTransform(scale=scale_estimate,
+                              translation=translation_estimate)
 
     for iteration in range(100):
         w = (mu + phi @ h).reshape(-1, 2)
@@ -60,9 +57,9 @@ def infer(edge_image, mu, phi, sigma2):
         closest_edge_point_indices = edge_nn.kneighbors(image_points)[1].flatten()
         closest_edge_points = edge_points[closest_edge_point_indices]
 
-        if iteration % 5 == 0:
+        if iteration % 20 == 0:
             plt.plot(edge_points[:, 0], edge_points[:, 1], 'r+')
-            plt.plot(image_points[:, 0], image_points[:, 1])
+            plt.plot(image_points[:, 0], image_points[:, 1], 'b')
             for im, ed in zip(image_points, closest_edge_points):
                 plt.plot([im[0], ed[0]], [im[1], ed[1]], 'g')
             plt.show()
@@ -78,4 +75,4 @@ def infer(edge_image, mu, phi, sigma2):
         print(h)
     print(image_points)
     print(closest_edge_points)
-    color_image = np.tile(255 * image[:, :, np.newaxis], (1, 1, 3))
+    return image_points
