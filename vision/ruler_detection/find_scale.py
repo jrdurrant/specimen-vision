@@ -21,8 +21,6 @@ def find_grid(hspace_angle, max_separation):
     Args:
         hspace_angle: Bins outputted from :py:meth:`hough_transform`, but for only a single angle.
         max_separation: Maximum size of the *largest* graduation.
-        graduations: List of graduation spacings in order of spacing size, normalised with respect to the
-                     smallest graduation
 
     Returns:
         int: Separation between graduations in pixels
@@ -37,15 +35,12 @@ def find_grid(hspace_angle, max_separation):
     return np.mean(np.diff(np.insert(peaks[:4], 0, 0)))
 
 
-def ruler_scale_factor(image, graduations, distance=1):
+def ruler_scale_factor(image, distance):
     """Returns the scale factor to convert from image coordinates to real world coordinates
 
     Args:
         image: BGR image of shape n x m x 3.
-        graduations: List of graduation spacings in order of spacing size. If distance is not given,
-                     these will be interpreted as the actual spacings in real world coordinates.
-                     Otherwise, they are interpreted as relative spacings
-        distance (optional): The real world size of the smallest graduation spacing
+        distance: The real world size of the smallest graduation spacing
     Returns:
         float: Unitless scale factor from image coordinates to real world coordinates.
 
@@ -62,9 +57,6 @@ def ruler_scale_factor(image, graduations, distance=1):
     hspace, angles, distances = hough_transform(edges)
     features = hspace_features(hspace, splits=16)
     angle_index = best_angles(np.array(features))
-
-    distance *= graduations[0]
-    graduations = np.array(graduations) / graduations[0]
 
     max_graduation_size = int(max(image.shape))
     line_separation_pixels = find_grid(hspace[:, angle_index], max_graduation_size)

@@ -6,7 +6,9 @@ Submodules
 
 .. toctree::
 
+   vision.measurements.procrustes
    vision.measurements.shape_analysis
+   vision.measurements.subspace_shape
 
 Module contents
 ---------------

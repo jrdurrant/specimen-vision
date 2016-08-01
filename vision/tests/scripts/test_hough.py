@@ -1,8 +1,6 @@
 import unittest
 import numpy as np
 from scipy.stats import entropy
-from nose_parameterized import parameterized
-from nose.tools import nottest
 from vision.ruler_detection.hough_space import average_local_entropy
 
 
@@ -23,15 +21,13 @@ def average_local_entropy_reference(arr, window_size=2):
 
 
 class TestCorrectness(unittest.TestCase):
-    def setUp(self):
-        # Number of random arrays to test
-        self.n = 100
+    @classmethod
+    def setUpClass(cls):
+        # Use a known seed so that the 'random' arrays are the same every time the test is run
+        np.random.seed(14)
 
-    @nottest
-    def generate_test_files():
-        return zip(range(5, 100))
-
-    @parameterized.expand(generate_test_files())
-    def test_vs_reference(self, length):
-        array = np.random.randint(0, 100000, length)
-        self.assertAlmostEquals(average_local_entropy(array), average_local_entropy_reference(array))
+    def test_vs_reference_100(self):
+        for length in range(5, 105):
+            with self.subTest(length=length):
+                array = np.random.randint(0, 100000, length)
+                self.assertAlmostEquals(average_local_entropy(array), average_local_entropy_reference(array))

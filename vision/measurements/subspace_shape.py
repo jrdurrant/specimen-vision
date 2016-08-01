@@ -4,6 +4,14 @@ from skimage.transform import SimilarityTransform, estimate_transform, matrix_tr
 import matplotlib.pyplot as plt
 
 
+def plot_closest_points(image_ponts, edge_points, closest_edge_points):
+    plt.plot(edge_points[:, 0], edge_points[:, 1], 'r+')
+    plt.plot(image_points[:, 0], image_points[:, 1], 'b')
+    for im, ed in zip(image_points, closest_edge_points):
+        plt.plot([im[0], ed[0]], [im[1], ed[1]], 'g')
+    plt.show()
+
+
 def learn(points, K=1):
     points = [point_set.flatten() for point_set in points]
     w = np.stack(points, axis=1)
@@ -19,6 +27,13 @@ def learn(points, K=1):
 
 
 def update_h(sigma2, phi, y, mu, psi):
+    """Updates the hidden variables using updated parameters.
+
+    This is an implementation of the equation:
+
+..  math::
+        \\hat{h} = (\\sigma^2 I + \\sum_{n=1}^N \\Phi_n^T A^T A \\Phi_n)^{-1} \\sum_{n=1}^N \\Phi_n^T A^T (y_n - A \\mu_n - b)
+    """
     N = y.shape[0]
     K = phi.shape[1]
 
@@ -58,11 +73,7 @@ def infer(edge_image, mu, phi, sigma2):
         closest_edge_points = edge_points[closest_edge_point_indices]
 
         if iteration % 20 == 0:
-            plt.plot(edge_points[:, 0], edge_points[:, 1], 'r+')
-            plt.plot(image_points[:, 0], image_points[:, 1], 'b')
-            for im, ed in zip(image_points, closest_edge_points):
-                plt.plot([im[0], ed[0]], [im[1], ed[1]], 'g')
-            plt.show()
+            plot_closest_points(image_ponts, edge_points, closest_edge_points)
 
         psi = estimate_transform('similarity', w, closest_edge_points)
 
@@ -72,7 +83,5 @@ def infer(edge_image, mu, phi, sigma2):
         closest_edge_points = edge_points[closest_edge_point_indices]
 
         h = update_h(sigma2, phi, closest_edge_points, mu, psi)
-        print(h)
-    print(image_points)
-    print(closest_edge_points)
+
     return image_points
