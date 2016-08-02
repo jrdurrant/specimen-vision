@@ -4,7 +4,7 @@ from skimage.transform import SimilarityTransform, estimate_transform, matrix_tr
 import matplotlib.pyplot as plt
 
 
-def plot_closest_points(image_ponts, edge_points, closest_edge_points):
+def plot_closest_points(image_points, edge_points, closest_edge_points):
     plt.plot(edge_points[:, 0], edge_points[:, 1], 'r+')
     plt.plot(image_points[:, 0], image_points[:, 1], 'b')
     for im, ed in zip(image_points, closest_edge_points):
@@ -53,8 +53,12 @@ def update_h(sigma2, phi, y, mu, psi):
     return np.linalg.inv(partial_1) @ partial_2
 
 
+def find_closest_points(image_points, edge_points):
+    pass
+
+
 def infer(edge_image, mu, phi, sigma2):
-    edge_points = np.array(np.where(edge_image[::-1, :])).T
+    edge_points = np.array(np.where(edge_image)).T
     edge_points[:, [0, 1]] = edge_points[:, [1, 0]]
 
     translation_estimate = edge_image.shape[1] / 2, edge_image.shape[0] / 2
@@ -73,7 +77,7 @@ def infer(edge_image, mu, phi, sigma2):
         closest_edge_points = edge_points[closest_edge_point_indices]
 
         if iteration % 20 == 0:
-            plot_closest_points(image_ponts, edge_points, closest_edge_points)
+            plot_closest_points(image_points, edge_points, closest_edge_points)
 
         psi = estimate_transform('similarity', w, closest_edge_points)
 

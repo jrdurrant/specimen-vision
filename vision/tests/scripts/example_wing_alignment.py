@@ -16,9 +16,9 @@ def read_shape(index):
 
     vertices = []
     with open(path, 'r') as csvfile:
-        reader = csv.reader(csvfile)
+        reader = csv.reader(csvfile, delimiter=' ')
         for row in reader:
-            if len(row) == 3:
+            if len(row) == 2:
                 vertices.append(row[:2])
     return np.array(vertices, dtype=np.float)
 
@@ -28,7 +28,18 @@ aligned_shapes = procrustes.generalized_procrustes(shapes)
 
 shape_model = subspace_shape.learn(aligned_shapes, K=5)
 
-image = get_test_image('wing_area', 'cropped', '4.png')
+mu, phi, sigma2 = shape_model
+
+for d in range(5):
+    for h_v in np.linspace(-2, 2, 10):
+        h = np.zeros((5, 1))
+        h[d] = h_v
+        s = mu + phi @ h
+        s = s.reshape(-1, 2)
+        plt.plot(s[:, 0], s[:, 1])
+    plt.show()
+
+image = get_test_image('wing_area', 'cropped', '0.png')
 saliency_map = saliency_dragonfly(image)
 cv2.imwrite('saliency.png', saliency_map)
 
@@ -52,14 +63,3 @@ fitted_shape[:, 1] = wings_image.shape[0] - fitted_shape[:, 1]
 for vertex in fitted_shape:
     wings_image[int(vertex[1]), int(vertex[0]), :] = [0, 0, 255]
 cv2.imwrite('wings_template.png', wings_image)
-
-mu, phi, sigma2 = shape_model
-
-for d in range(5):
-    for h_v in np.linspace(-2, 2, 10):
-        h = np.zeros((5, 1))
-        h[d] = h_v
-        s = mu + phi @ h
-        s = s.reshape(-1, 2)
-        plt.plot(s[:, 0], s[:, 1])
-    plt.show()

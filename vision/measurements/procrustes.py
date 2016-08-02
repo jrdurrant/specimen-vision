@@ -15,9 +15,9 @@ def transform_to_template(shape, template, transformation_type='similarity'):
                             It must have the same array shape and type, and
                             corresponding rows must respresent corresponding
                             vertices. For example, the vertex respresented by
-                            row **i** in the *input* will try to match as closesly
-                            as possible to the vertex represented by row **i**
-                            in the *template*.
+                            row **i** in the *input* will try to match as
+                            closesly as possible to the vertex represented by
+                            row **i** in the *template*.
 
         transformation_type (str): The type of transformation to use when
                                    fitting the shape to the template. The
