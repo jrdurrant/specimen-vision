@@ -50,9 +50,8 @@ def normalise_shape(shape):
         input shape.
     """
     centre = np.mean(shape, axis=0)
-    shape -= centre
 
-    distances_from_centre = np.sqrt(np.sum(np.power(shape, 2), axis=1))
+    distances_from_centre = np.sqrt(np.sum(np.power(shape - centre, 2), axis=1))
     return shape / np.mean(distances_from_centre)
 
 

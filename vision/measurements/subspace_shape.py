@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
 from skimage.transform import SimilarityTransform, estimate_transform, matrix_transform
+from skimage.measure import compare_ssim
 import matplotlib.pyplot as plt
 
 
@@ -53,10 +54,6 @@ def update_h(sigma2, phi, y, mu, psi):
     return np.linalg.inv(partial_1) @ partial_2
 
 
-def find_closest_points(image_points, edge_points):
-    pass
-
-
 def infer(edge_image, mu, phi, sigma2):
     edge_points = np.array(np.where(edge_image)).T
     edge_points[:, [0, 1]] = edge_points[:, [1, 0]]
@@ -69,14 +66,14 @@ def infer(edge_image, mu, phi, sigma2):
     psi = SimilarityTransform(scale=scale_estimate,
                               translation=translation_estimate)
 
-    for iteration in range(100):
+    for iteration in range(10):
         w = (mu + phi @ h).reshape(-1, 2)
         image_points = matrix_transform(w, psi.params)
 
         closest_edge_point_indices = edge_nn.kneighbors(image_points)[1].flatten()
         closest_edge_points = edge_points[closest_edge_point_indices]
 
-        if iteration % 20 == 0:
+        if iteration % 2 == 0:
             plot_closest_points(image_points, edge_points, closest_edge_points)
 
         psi = estimate_transform('similarity', w, closest_edge_points)
