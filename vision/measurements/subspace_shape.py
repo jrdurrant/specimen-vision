@@ -55,15 +55,20 @@ def find_closest_points(image_points, edge_points):
     pass
 
 
-def infer(edge_image, mu, phi, sigma2):
+def infer(edge_image, mu, phi, sigma2, scale_estimate=None, rotation=0, translation=(0, 0)):
     edge_points = np.array(np.where(edge_image)).T
     edge_points[:, [0, 1]] = edge_points[:, [1, 0]]
 
-    scale_estimate = min(edge_image.shape)
+    if scale_estimate is None:
+        scale_estimate = min(edge_image.shape)
+
+    mu = (mu.reshape(-1, 2) - mu.reshape(-1, 2).mean(axis=0)).reshape(-1, 1)
+    average_distance = np.sqrt(np.power(mu.reshape(-1, 2), 2).sum(axis=1)).mean()
+    scale_estimate /= average_distance * np.sqrt(2)
 
     edge_nn = NearestNeighbors(n_neighbors=1).fit(edge_points)
     h = np.zeros((phi.shape[1], 1))
-    psi = SimilarityTransform(scale=scale_estimate)
+    psi = SimilarityTransform(scale=scale_estimate, rotation=rotation, translation=translation)
 
     while True:
         w = (mu + phi @ h).reshape(-1, 2)
