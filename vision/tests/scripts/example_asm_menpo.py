@@ -26,13 +26,13 @@ aligned_shapes = procrustes.generalized_procrustes(shapes)
 
 shape_model = subspace_shape.learn(aligned_shapes, K=5)
 
-wings_image = get_test_image('wing_area', 'cropped', 'unlabelled', '9.png')
+wings_image = get_test_image('wing_area', 'cropped', 'unlabelled', '5.png')
 cv2.imwrite('wings.png', wings_image)
 edges = canny(wings_image[:, :, 1], 2.5)
 cv2.imwrite('wing_edge.png', 255 * edges)
 
 inference = subspace_shape.infer(edges, *shape_model)
-for iteration in range(50):
+for iteration in range(100):
     fitted_shape = next(inference)
 
 output_image = np.copy(wings_image)
@@ -46,13 +46,13 @@ training_images = menpo.io.import_images('/home/james/vision/vision/tests/test_d
 
 
 patch_aam = menpofit.aam.PatchAAM(training_images, group='PTS', patch_shape=(35, 35),
-                                  diagonal=150, holistic_features=menpo.feature.fast_dsift,
-                                  max_shape_components=50, max_appearance_components=150,
+                                  holistic_features=menpo.feature.fast_dsift,
                                   verbose=True)
 
-fitter = menpofit.aam.LucasKanadeAAMFitter(patch_aam, n_shape=0.9, n_appearance=0.9)
+fitter = menpofit.aam.LucasKanadeAAMFitter(patch_aam, n_shape=None, n_appearance=None)
 
 image = menpo.image.Image(np.transpose(wings_image[:, :, [2, 1, 0]], (2, 0, 1)))
 result = fitter.fit_from_shape(image, menpo.shape.PointCloud(fitted_shape[:, [1, 0]]))
 
 result.view(render_initial_shape=True, figure_size=(20, 20)).save_figure('fig.png', overwrite=True)
+result.view_iterations(figure_size=(20, 20)).save_figure('fig_iter.png', overwrite=True)
