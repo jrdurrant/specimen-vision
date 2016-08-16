@@ -14,4 +14,4 @@ class TestProcrustes(unittest.TestCase):
         shape = normalise_shape(shape)
         normalised_shape = normalise_shape(shape)
 
-        np.testing.assert_array_equal(shape, normalised_shape)
+        np.testing.assert_almost_equal(shape, normalised_shape)
