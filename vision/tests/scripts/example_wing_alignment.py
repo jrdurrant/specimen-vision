@@ -18,19 +18,25 @@ import menpo
 import menpofit
 from operator import attrgetter
 from skimage.morphology import closing, disk, skeletonize
+from matplotlib import cm
 
 
 def visualize_modes(shape_model):
     mu, phi, sigma2 = shape_model
+    K = phi.shape[1]
 
-    for d in range(5):
-        for h_v in np.linspace(-2, 2, 10):
-            h = np.zeros((5, 1))
+    n = 10
+    colors = [cm.bone(i) for i in np.linspace(0.35, 1, n)]
+    for d in range(K):
+        plt.gca().set_color_cycle(colors)
+        for h_v in np.linspace(2, -2, n):
+            h = np.zeros((K, 1))
             h[d] = h_v
             s = mu + phi @ h
             s = s.reshape(-1, 2)
             plt.plot(s[:, 0], s[:, 1])
-        plt.show()
+        plt.savefig('mode{}.png'.format(d), transparent=True)
+        plt.clf()
 
 
 def read_shape(index):
@@ -122,6 +128,8 @@ cv2.imwrite('distance_box.png', wings_image)
 aligned_shapes = procrustes.generalized_procrustes(shapes)
 
 shape_model = subspace_shape.learn(aligned_shapes, K=8)
+
+visualize_modes(shape_model)
 
 # slices = [slice(13, -2)] + [slice(start, None) for start in range(13)[::-1]]
 slices = [slice(None)]
