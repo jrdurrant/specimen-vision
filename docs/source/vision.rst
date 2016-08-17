@@ -7,9 +7,7 @@ Subpackages
 .. toctree::
 
     vision.color_analysis
-    vision.herbarium_analysis
     vision.lib
-    vision.marking_detection
     vision.measurements
     vision.ruler_detection
     vision.segmentation

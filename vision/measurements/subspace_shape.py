@@ -30,9 +30,11 @@ def learn(points, K=1):
 
 def update_h(sigma2, phi, y, mu, psi):
     """Updates the hidden variables using updated parameters.
+
     This is an implementation of the equation:
 ..  math::
         \\hat{h} = (\\sigma^2 I + \\sum_{n=1}^N \\Phi_n^T A^T A \\Phi_n)^{-1} \\sum_{n=1}^N \\Phi_n^T A^T (y_n - A \\mu_n - b)
+
     """
     N = y.shape[0]
     K = phi.shape[1]
