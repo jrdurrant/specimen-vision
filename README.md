@@ -14,7 +14,5 @@ Given an image that contains a ruler, this method  determines the scale that the
 A set of methods for analysing specific properties. Currently this is limited to a set of butterflies and moths.
 #### Morphometrics
 Determining the area of the specimen's wings, as well as the length of the wing's leading edge.
-#### Identifying features
-Given examples of a marking, this gives a binary classification on a new image, specifying whether the given marking is present or not.
 #### Colour analysis
 For an image, or a set of images, this finds the set of dominant colours. This can be helpful for comparison between species as well as simple visualisation. 
