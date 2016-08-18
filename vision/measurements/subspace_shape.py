@@ -69,7 +69,11 @@ def similarity(edge_image, mu, phi, sigma2, h, psi):
     return -closest_distances(image_points[:, 0], image_points[:, 1]).sum() / sigma2 + noise
 
 
-def infer(edge_image, edge_lengths, mu, phi, sigma2, update_slice=slice(None), scale_estimate=None, rotation=0, translation=(0, 0)):
+def infer(edge_image, edge_lengths, mu, phi, sigma2,
+          update_slice=slice(None),
+          scale_estimate=None,
+          rotation=0,
+          translation=(0, 0)):
     edge_points = np.array(np.where(edge_image)).T
     edge_points[:, [0, 1]] = edge_points[:, [1, 0]]
     edge_score = edge_image.shape[0] * np.exp(-edge_lengths[edge_image] / (0.25 * edge_image.shape[0])).reshape(-1, 1)

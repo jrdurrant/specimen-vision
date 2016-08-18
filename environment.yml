@@ -13,5 +13,6 @@ dependencies:
 - pip:
   - nose-parameterized==0.5.0
   - peakutils==1.0.3
+  - pyamg==3.0.2
   - sphinx==1.4.4
   - sphinx-rtd-theme==0.1.9

@@ -4,6 +4,7 @@ import os
 import sys
 import skimage.io
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def read_image(filename, **kwargs):
@@ -11,7 +12,11 @@ def read_image(filename, **kwargs):
 
 
 def write_image(filename, image, **kwargs):
-    return skimage.io.imsave(filename, image, **kwargs)
+    if image.dtype.type == np.bool_:
+        image_out = 255 * image
+    else:
+        image_out = image
+    return skimage.io.imsave(filename, image_out, **kwargs)
 
 
 def apply_all_images(input_folder, function, output_folder=None):
