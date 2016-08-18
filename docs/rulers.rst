@@ -9,7 +9,7 @@ Given an image such as the one below, there are two things needed to determine t
 
 	Specimen image
 
-* **A visible ruler in the image**: without this there is no way to automatically anchor the size of the specimen in real world space. 
+* **A visible ruler in the image**: without this there is no way to automatically anchor the size of the specimen in real world space.
 * **Distance between the smallest graduations**: for this example it is 0.5mm.
 
 ..  figure::  images/drawing.png
@@ -22,10 +22,10 @@ A simple example is given of how this is used on an actual image, with the param
 
 ..  code:: python
 
-	import cv2
+	from skimage.io import imread
 	from vision.ruler_detection.find_scale import ruler_scale_factor
 
-	image = cv2.imread('specimen_image.jpg')
+	image = imread('specimen_image.jpg')
 	scale_factor = ruler_scale_factor(image, distance=0.5)
 	pixel_distance = 7.566
 	real_distance = pixel_distance * scale_factor

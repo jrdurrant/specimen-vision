@@ -1,5 +1,4 @@
 import numpy as np
-import cv2
 from scipy.sparse.csgraph import connected_components
 from vision.ruler_detection.hough_space import grid_hspace_features
 from skimage.feature import canny
@@ -37,8 +36,10 @@ def find_ruler(image):
     order = np.argsort(sizes)[::-1]
 
     height, width = binary_image.shape
-    label_image_size = cv2.resize(labels, (width, height), interpolation=cv2.INTER_NEAREST)
-    mask = label_image_size == label_props[order[0]].label
+    grid_height = np.ceil(height / labels.shape[0])
+    grid_width = np.ceil(width / labels.shape[1])
+    label_image_size = labels.repeat(grid_height, axis=0).repeat(grid_width, axis=1)
+    mask = label_image_size[:height, :width] == label_props[order[0]].label
 
     crop = crop_boolean_array(mask)
     return image[crop], mask[crop]

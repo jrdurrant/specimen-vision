@@ -1,5 +1,5 @@
-import cv2
 import numpy as np
+from skimage.color import rgb2lab, lab2rgb
 from scipy.cluster.vq import kmeans2
 from collections import namedtuple
 
@@ -19,7 +19,7 @@ def dominant_colors(image, num_colors, mask=None):
         list: The list of Color objects representing the most dominant colors in the image.
 
     """
-    image = cv2.cvtColor(image / 255.0, cv2.cv.CV_BGR2Lab)
+    image = rgb2lab(image / 255.0)
 
     if mask is not None:
         data = image[mask > 250]
@@ -31,7 +31,7 @@ def dominant_colors(image, num_colors, mask=None):
     centroids, labels = kmeans2(data, num_colors, iter=30)
     counts = np.histogram(labels, bins=range(0, num_colors + 1), normed=True)[0]
 
-    centroids_RGB = cv2.cvtColor(np.reshape(centroids, (-1, 1, 3)), cv2.cv.CV_Lab2BGR)[:, 0, :] * 255.0
+    centroids_RGB = lab2rgb(centroids.reshape(-1, 1, 3))[:, 0, :] * 255.0
     colors = [Color(centroid, count) for centroid, count in zip(centroids_RGB, counts)]
     colors.sort(key=lambda color: np.mean(color.BGR))
 

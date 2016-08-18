@@ -2,6 +2,16 @@ import csv
 import glob
 import os
 import sys
+import skimage.io
+import matplotlib.pyplot as plt
+
+
+def read_image(filename, **kwargs):
+    return plt.imread(filename, **kwargs)
+
+
+def write_image(filename, image, **kwargs):
+    return skimage.io.imsave(filename, image, **kwargs)
 
 
 def apply_all_images(input_folder, function, output_folder=None):

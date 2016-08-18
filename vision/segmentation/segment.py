@@ -1,4 +1,4 @@
-import cv2
+from skimage.color import rgb2hsv
 import numpy as np
 from vision.image_functions import threshold
 from skimage.measure import label, regionprops
@@ -7,12 +7,12 @@ from skimage.morphology import binary_closing
 
 
 def saliency_butterfly(image):
-    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    hsv_image = rgb2hsv(image)
     return 0.25 * hsv_image[:, :, 2] + 0.75 * hsv_image[:, :, 1]
 
 
 def saliency_dragonfly(image):
-    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    hsv_image = rgb2hsv(image)
     return hsv_image[:, :, 1]
 
 

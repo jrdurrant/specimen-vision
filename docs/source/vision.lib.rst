@@ -7,7 +7,6 @@ Submodules
 .. toctree::
 
    vision.lib.box
-   vision.lib.contour
    vision.lib.ruler
 
 Module contents

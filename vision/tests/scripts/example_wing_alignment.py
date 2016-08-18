@@ -9,7 +9,6 @@ from vision.measurements import subspace_shape, procrustes
 from skimage.measure import find_contours, regionprops, label
 from skimage.transform import SimilarityTransform
 import csv
-import cv2
 import matplotlib.pyplot as plt
 from skimage import draw
 from sklearn.cluster import KMeans
@@ -19,6 +18,7 @@ import menpofit
 from operator import attrgetter
 from skimage.morphology import closing, disk, skeletonize
 from matplotlib import cm
+from vision.io_functions import write_image
 
 
 def visualize_modes(shape_model):
@@ -54,7 +54,7 @@ def read_shape(index):
 shapes = [read_shape(i) for i in range(4)]
 
 wings_image = get_test_image('wing_area', 'cropped', 'unlabelled', '8.png')
-cv2.imwrite('wings.png', wings_image)
+write_image('wings.png', wings_image)
 edges = canny(wings_image[:, :, 1], 3)
 
 saliency = saliency_dragonfly(wings_image)
@@ -69,7 +69,7 @@ edges = skeletonize(edges)
 gaps = scipy.ndimage.filters.convolve(1 * edges, np.ones((3, 3)), mode='constant', cval=False)
 edges[(gaps == 2) & ~edges] = True
 edges = skeletonize(edges)
-cv2.imwrite('wing_edge.png', 255 * edges)
+write_image('wing_edge.png', 255 * edges)
 
 distance = scipy.ndimage.distance_transform_edt(~edges)
 
@@ -87,10 +87,10 @@ edge_lengths = np.zeros_like(labels)
 for i, edge in enumerate(sorted(regions, key=attrgetter('filled_area'))):
     edge_lengths[labels == edge.label] = edge.filled_area
 
-cv2.imwrite('labels.png', labels * 255 / labels.max())
+write_image('labels.png', labels * 255 / labels.max())
 
 scores = edges.shape[0] * np.exp(-edge_lengths**4 / (8 * edges.shape[0]**4))
-cv2.imwrite('edges_wing.png', scores * 255 / scores.max())
+write_image('edges_wing.png', scores * 255 / scores.max())
 
 kmeans = KMeans(n_clusters=8)
 indices_vector = np.array(np.where(thresh)).T
@@ -100,10 +100,10 @@ color_vector = wings_image[thresh].reshape(-1, 3)
 
 distance2 = np.copy(distance)
 distance2[~thresh] = 0
-cv2.imwrite('distance.png', 255 * distance2 / distance2.max())
+write_image('distance.png', 255 * distance2 / distance2.max())
 thresh2 = threshold(distance2)
 output_image = (0.5 + 0.5 * thresh2)[:, :, np.newaxis] * wings_image
-cv2.imwrite('distance2.png', output_image)
+write_image('distance2.png', output_image)
 regions = regionprops(label(thresh2))
 wings = sorted([r for r in regions if r.filled_area > 1000], key=attrgetter('filled_area'), reverse=True)
 initial_rotation = np.zeros(3)
@@ -123,7 +123,7 @@ for i, wing in enumerate(wings):
     rotated_coords = tform(coords) + wing.centroid
     box_coords = polygon_perimeter(rotated_coords[:, 0], rotated_coords[:, 1])
     set_color(wings_image, box_coords, [0, 0, 255])
-cv2.imwrite('distance_box.png', wings_image)
+write_image('distance_box.png', wings_image)
 
 aligned_shapes = procrustes.generalized_procrustes(shapes)
 
@@ -156,7 +156,7 @@ for i, s in enumerate(slices):
         points = fitted_shape[:, [1, 0]]
         perimeter = draw.polygon_perimeter(points[:, 0], points[:, 1])
         draw.set_color(output_image, (perimeter[0].astype(np.int), perimeter[1].astype(np.int)), [0, 0, 255])
-        cv2.imwrite('wings_template_{}.png'.format(iteration), output_image)
+        write_image('wings_template_{}.png'.format(iteration), output_image)
 
 # training_images = menpo.io.import_images('/home/james/vision/vision/tests/test_data/wing_area/cropped/',
 #                                          verbose=True)

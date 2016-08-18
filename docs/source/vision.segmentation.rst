@@ -7,7 +7,6 @@ Submodules
 .. toctree::
 
    vision.segmentation.segment
-   vision.segmentation.segmentation
 
 Module contents
 ---------------

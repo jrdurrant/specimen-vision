@@ -7,7 +7,6 @@ Submodules
 .. toctree::
 
    vision.color_analysis.color_analysis
-   vision.color_analysis.radial_color
 
 Module contents
 ---------------

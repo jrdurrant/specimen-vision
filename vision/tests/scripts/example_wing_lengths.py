@@ -21,11 +21,11 @@ for specimen_id, filename in specimens:
         writer = csv.writer(csvfile)
 
         start = timeit.default_timer()
-        image = cv2.imread(filename)
+        image = io_functions.read_image(filename)
 
         height, width = image.shape[:2]
 
-        segmented_image, segmented_mask = segmentation.segment_butterfly(image, 
+        segmented_image, segmented_mask = segmentation.segment_butterfly(image,
                                                                          saliency_threshold=96,
                                                                          approximate=False)
 

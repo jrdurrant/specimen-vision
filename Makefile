@@ -9,7 +9,7 @@ clean-pyc:
 
 test:
 	@echo 'Tests'
-	nosetests -v --cover-html --cover-inclusive --cover-erase --cover-tests --cover-package=vision vision
+	nosetests -v --where=vision/tests/scripts -s
 
 doc:
 	@echo 'Docs'

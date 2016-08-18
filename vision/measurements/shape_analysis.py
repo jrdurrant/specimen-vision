@@ -1,5 +1,4 @@
 import numpy as np
-import cv2
 
 
 def wing_length(wing_mask, wing_path):
@@ -26,7 +25,7 @@ def wing_length(wing_mask, wing_path):
     xv, yv = xv[np.where(wing == 255)], yv[np.where(wing == 255)]
 
     if xv.size != 0 and yv.size != 0:
-        distance, _ = cv2.cartToPolar(xv.astype('float32') - cut_x, yv.astype('float32') - cut_y)
+        distance = np.sqrt(np.power(xv - cut_x, 2) + np.power(yv - cut_y, 2))
 
         index = np.argmax(distance)
         wing_length = distance[index, 0]

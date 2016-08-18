@@ -4,7 +4,8 @@ from nose_parameterized import parameterized
 from nose.tools import nottest
 from operator import itemgetter
 from vision.ruler_detection.find_scale import ruler_scale_factor
-from vision.tests import get_test_image, get_test_path, get_test_folder_images
+from vision.tests.utility import get_test_image, get_test_path, get_test_folder_images
+import pdb
 
 
 class TestTransforms(unittest.TestCase):
@@ -39,5 +40,7 @@ class TestMeasured(unittest.TestCase):
     @parameterized.expand(generate_test_files())
     def test_measurement(self, file, separation):
         image = get_test_image('ruler', 'measured', file)
+        if len(image.shape) != 3:
+            pdb.set_trace()
         scale_factor = ruler_scale_factor(image, distance=0.5)
         self.assertAlmostEqual(separation, 0.5 / scale_factor, delta=1)
