@@ -5,12 +5,11 @@ from vision.image_functions import threshold
 from vision.segmentation.segment import saliency_dragonfly
 from vision.tests import get_test_image
 from vision.measurements import subspace_shape, procrustes
-from skimage.measure import find_contours, regionprops, label
+from skimage.measure import regionprops, label
 from skimage.transform import SimilarityTransform
 import csv
 import matplotlib.pyplot as plt
 from skimage import draw
-from sklearn.cluster import KMeans
 import scipy
 from operator import attrgetter
 from skimage.morphology import skeletonize
@@ -78,33 +77,19 @@ aligned_shapes = procrustes.generalized_procrustes(shapes)
 shape_model = subspace_shape.learn(aligned_shapes, K=8)
 
 wings_image = get_test_image('wing_area', 'cropped', 'unlabelled', '7.png')
-# write_image('wings.png', wings_image)
 edges = canny(wings_image[:, :, 1], 3)
 
 saliency = saliency_dragonfly(wings_image)
 thresh = threshold(saliency)
 
-background = threshold(scipy.ndimage.distance_transform_edt(~thresh))
-
-contours = find_contours(thresh, level=0.5)
-outline = max(contours, key=attrgetter('size')).astype(np.int)
-outline_image = np.zeros_like(edges)
-draw.set_color(outline_image, (outline[:, 0], outline[:, 1]), True)
-
 edges = skeletonize(edges)
 gaps = scipy.ndimage.filters.convolve(1 * edges, np.ones((3, 3)), mode='constant', cval=False)
 edges[(gaps == 2) & ~edges] = True
 edges = skeletonize(edges)
-# write_image('wing_edge.png', edges)
 
 distance = scipy.ndimage.distance_transform_edt(~edges)
 
 labels = label(edges)
-num_labels = np.max(labels)
-edge_distance = np.zeros(num_labels + 1)
-for i in range(num_labels + 1):
-    other_distance = scipy.ndimage.distance_transform_edt(~((labels > 0) & (labels != (i))))
-    edge_distance[i] = np.median(other_distance[labels == (i)])
 
 regions = regionprops(labels)
 
@@ -112,32 +97,15 @@ edge_lengths = np.zeros_like(labels)
 for i, edge in enumerate(sorted(regions, key=attrgetter('filled_area'))):
     edge_lengths[labels == edge.label] = edge.filled_area
 
-# write_image('labels.png', labels / labels.max())
 edges = edge_lengths > 500
-
-scores = edges.shape[0] * np.exp(-edge_lengths**4 / (8 * edges.shape[0]**4))
-write_image('edges_wing.png', scores / scores.max())
-
-kmeans = KMeans(n_clusters=8)
-indices_vector = np.array(np.where(thresh)).T
-saliency_vector = saliency[thresh].reshape(-1, 1)
-distance_vector = distance[thresh].reshape(-1, 1)
-color_vector = wings_image[thresh].reshape(-1, 3)
 
 distance2 = np.copy(distance)
 distance2[~thresh] = 0
-# write_image('distance.png', distance2 / distance2.max())
 thresh2 = threshold(distance2)
-output_image = (0.5 + 0.5 * thresh2)[:, :, np.newaxis] * wings_image
-# write_image('distance2.png', output_image)
+# output_image = (0.5 + 0.5 * thresh2)[:, :, np.newaxis] * wings_image
 wing_labels = label(thresh2)
 regions = regionprops(wing_labels)
 wings = sorted([r for r in regions if r.filled_area > 1000], key=attrgetter('filled_area'), reverse=True)
-
-labels = np.zeros_like(wing_labels)
-labels[background] = 1
-for index, wing in enumerate(wings):
-    labels[wing_labels == wing.label] = index + 2
 
 initial_rotation = np.zeros(3)
 initial_scale = np.zeros(3)
@@ -156,10 +124,8 @@ for i, wing in enumerate(wings):
     rotated_coords = tform(coords) + wing.centroid
     box_coords = polygon_perimeter(rotated_coords[:, 0], rotated_coords[:, 1])
     set_color(wings_image, box_coords, [0, 0, 1])
-# write_image('distance_box.png', wings_image)
 
 slices = [slice(13, -2)] + [slice(start, None) for start in range(13)[::-1]]
-# slices = [slice(None)]
 
 inference = subspace_shape.infer(edges,
                                  edge_lengths,
