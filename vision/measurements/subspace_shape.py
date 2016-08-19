@@ -1,5 +1,4 @@
 import numpy as np
-from sklearn.neighbors import NearestNeighbors
 from skimage.transform import SimilarityTransform, estimate_transform, matrix_transform
 import matplotlib.pyplot as plt
 import scipy
@@ -67,7 +66,7 @@ def similarity(edge_image, mu, phi, sigma2, h, psi):
     if noise.pdf(h.flatten()) == 0:
         print(h.flatten())
     noise = np.log(noise.pdf(h.flatten()))
-    return -closest_distances(image_points[:, 0], image_points[:, 1]).sum() / sigma2 + noise
+    return -closest_distances(image_points[:, 0], image_points[:, 1]).sum() / sigma2
 
 
 def gradient_step(gradient_y, gradient_x, magnitude, locations, step_size=5):
@@ -85,13 +84,6 @@ def infer(edge_image, edge_lengths, mu, phi, sigma2,
           scale_estimate=None,
           rotation=0,
           translation=(0, 0)):
-    # edge_points = np.array(np.where(edge_image)).T
-    # edge_points[:, [0, 1]] = edge_points[:, [1, 0]]
-    # edge_score = edge_image.shape[0] * np.exp(-edge_lengths[edge_image] / (0.25 * edge_image.shape[0])).reshape(-1, 1)
-    # edge_points = np.concatenate((edge_points, edge_score), axis=1)
-    #
-    # edge_nn = NearestNeighbors(n_neighbors=1).fit(edge_points)
-
     edge_near = scipy.ndimage.distance_transform_edt(~edge_image)
     edge_near_blur = gaussian(edge_near, 2)
     Gy, Gx = np.gradient(edge_near_blur)
@@ -113,9 +105,6 @@ def infer(edge_image, edge_lengths, mu, phi, sigma2,
         image_points = matrix_transform(w, psi.params)[update_slice, :]
         image_points = np.concatenate((image_points, np.zeros((image_points.shape[0], 1))), axis=1)
 
-        # closest_edge_point_indices = edge_nn.kneighbors(image_points)[1].flatten()
-        # closest_edge_points = edge_points[closest_edge_point_indices, :2]
-
         closest_edge_points = gradient_step(Gy, Gx, mag, image_points)
 
         w = mu.reshape(-1, 2)
@@ -123,9 +112,6 @@ def infer(edge_image, edge_lengths, mu, phi, sigma2,
 
         image_points = matrix_transform(w, psi.params)[update_slice, :]
         image_points = np.concatenate((image_points, np.zeros((image_points.shape[0], 1))), axis=1)
-
-        # closest_edge_point_indices = edge_nn.kneighbors(image_points)[1].flatten()
-        # closest_edge_points = edge_points[closest_edge_point_indices, :2]
 
         closest_edge_points = gradient_step(Gy, Gx, mag, image_points)
 
@@ -138,4 +124,4 @@ def infer(edge_image, edge_lengths, mu, phi, sigma2,
         w = (mu + phi @ h).reshape(-1, 2)
         image_points = matrix_transform(w, psi.params)
 
-        update_slice = yield image_points, closest_edge_points
+        update_slice = yield image_points, closest_edge_points, h, psi

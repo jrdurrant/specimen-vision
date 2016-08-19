@@ -76,7 +76,8 @@ shapes = [smoothed_shape(read_shape(i)) for i in range(4)]
 aligned_shapes = procrustes.generalized_procrustes(shapes)
 shape_model = subspace_shape.learn(aligned_shapes, K=8)
 
-wings_image = get_test_image('wing_area', 'cropped', 'unlabelled', '7.png')
+# wings_image = get_test_image('wing_area', 'cropped', 'unlabelled', '7.png')
+wings_image = get_test_image('wing_area', 'pinned', '1.png')
 edges = canny(wings_image[:, :, 1], 3)
 
 saliency = saliency_dragonfly(wings_image)
@@ -102,7 +103,6 @@ edges = edge_lengths > 500
 distance2 = np.copy(distance)
 distance2[~thresh] = 0
 thresh2 = threshold(distance2)
-# output_image = (0.5 + 0.5 * thresh2)[:, :, np.newaxis] * wings_image
 wing_labels = label(thresh2)
 regions = regionprops(wing_labels)
 wings = sorted([r for r in regions if r.filled_area > 1000], key=attrgetter('filled_area'), reverse=True)
@@ -127,23 +127,22 @@ for i, wing in enumerate(wings):
 
 slices = [slice(13, -2)] + [slice(start, None) for start in range(13)[::-1]]
 
-inference = subspace_shape.infer(edges,
-                                 edge_lengths,
-                                 *shape_model,
-                                 update_slice=slices[0],
-                                 scale_estimate=initial_scale[0],
-                                 rotation=initial_rotation[0],
-                                 translation=initial_translation[0, [1, 0]])
+for wing_index in range(len(wings)):
+    inference = subspace_shape.infer(edges,
+                                     edge_lengths,
+                                     *shape_model,
+                                     update_slice=slices[0],
+                                     scale_estimate=initial_scale[wing_index],
+                                     rotation=initial_rotation[wing_index],
+                                     translation=initial_translation[wing_index, [1, 0]])
 
-fitted_shape_old = np.zeros_like(shape_model[0].reshape(-1, 2))
-inference.send(None)
-for i, s in enumerate(slices):
-    for iteration in range(100):
-        fitted_shape, closest_edge_points = inference.send(s)
+    inference.send(None)
+    for i, s in enumerate(slices):
+        for iteration in range(100):
+            fitted_shape, closest_edge_points, h, psi = inference.send(s)
 
-        print((np.power(fitted_shape - fitted_shape_old, 2).sum(axis=1).mean()))
-        fitted_shape_old = fitted_shape
+            # if iteration % 50 == 0:
+            #     output_image = visualize_result(wings_image, edges, fitted_shape, closest_edge_points)
+            #     write_image('wing_{}_slice_{}_iteration_{}.png'.format(wing_index, i, iteration), output_image)
 
-        if iteration % 50 == 0:
-            output_image = visualize_result(wings_image, edges, fitted_shape, closest_edge_points)
-            write_image('wings_template_slice_{}_iteration_{}.png'.format(i, iteration), output_image)
+    print(subspace_shape.similarity(edges, *shape_model, h, psi))
