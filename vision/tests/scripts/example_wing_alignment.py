@@ -16,8 +16,6 @@ from operator import attrgetter
 from skimage.morphology import skeletonize
 from matplotlib import cm
 from vision.io_functions import write_image
-from skimage.color import rgb2lab
-from skimage.segmentation import random_walker
 
 
 def visualize_modes(shape_model):
@@ -62,9 +60,24 @@ def smoothed_shape(shape, iterations=3):
             shape_smooth[2 * i, :] = 0.75 * shape_smooth_old[i, :] + 0.25 * shape_smooth_old[i + 1, :]
     return shape_smooth
 
-shapes = [smoothed_shape(read_shape(i)) for i in range(4)]
 
-wings_image = get_test_image('wing_area', 'cropped', 'unlabelled', '8.png')
+def visualize_result(image, edge_image, shape, closest_points):
+    output_image = 0.5 * (image + edge_image[:, :, np.newaxis])
+
+    points = closest_points[:, [1, 0]]
+    perimeter = draw.polygon_perimeter(points[:, 0], points[:, 1])
+    draw.set_color(output_image, (perimeter[0].astype(np.int), perimeter[1].astype(np.int)), [0, 1, 0])
+
+    points = shape[:, [1, 0]]
+    perimeter = draw.polygon_perimeter(points[:, 0], points[:, 1])
+    draw.set_color(output_image, (perimeter[0].astype(np.int), perimeter[1].astype(np.int)), [0, 0, 1])
+    return output_image
+
+shapes = [smoothed_shape(read_shape(i)) for i in range(4)]
+aligned_shapes = procrustes.generalized_procrustes(shapes)
+shape_model = subspace_shape.learn(aligned_shapes, K=8)
+
+wings_image = get_test_image('wing_area', 'cropped', 'unlabelled', '7.png')
 # write_image('wings.png', wings_image)
 edges = canny(wings_image[:, :, 1], 3)
 
@@ -100,9 +113,10 @@ for i, edge in enumerate(sorted(regions, key=attrgetter('filled_area'))):
     edge_lengths[labels == edge.label] = edge.filled_area
 
 # write_image('labels.png', labels / labels.max())
+edges = edge_lengths > 500
 
 scores = edges.shape[0] * np.exp(-edge_lengths**4 / (8 * edges.shape[0]**4))
-# write_image('edges_wing.png', scores / scores.max())
+write_image('edges_wing.png', scores / scores.max())
 
 kmeans = KMeans(n_clusters=8)
 indices_vector = np.array(np.where(thresh)).T
@@ -125,9 +139,6 @@ labels[background] = 1
 for index, wing in enumerate(wings):
     labels[wing_labels == wing.label] = index + 2
 
-seg = random_walker(rgb2lab(wings_image), labels, multichannel=True)
-write_image('seg.png', seg / seg.max())
-
 initial_rotation = np.zeros(3)
 initial_scale = np.zeros(3)
 initial_translation = np.zeros((3, 2))
@@ -135,7 +146,7 @@ for i, wing in enumerate(wings):
     tform = SimilarityTransform(rotation=wing.orientation)
     major = wing.major_axis_length * 1.125
     minor = wing.minor_axis_length * 1.125
-    initial_scale[i] = np.sqrt(np.power(major / 2, 2) + np.power(minor / 2, 2))
+    initial_scale[i] = 2 * np.sqrt(np.power(major / 2, 2) + np.power(minor / 2, 2))
     initial_rotation[i] = -wing.orientation
     initial_translation[i, :] = wing.centroid
     coords = np.array([[-(minor / 2), -(major / 2)],
@@ -147,34 +158,26 @@ for i, wing in enumerate(wings):
     set_color(wings_image, box_coords, [0, 0, 1])
 # write_image('distance_box.png', wings_image)
 
-aligned_shapes = procrustes.generalized_procrustes(shapes)
-
-shape_model = subspace_shape.learn(aligned_shapes, K=8)
-
-# slices = [slice(13, -2)] + [slice(start, None) for start in range(13)[::-1]]
-slices = [slice(None)]
+slices = [slice(13, -2)] + [slice(start, None) for start in range(13)[::-1]]
+# slices = [slice(None)]
 
 inference = subspace_shape.infer(edges,
                                  edge_lengths,
                                  *shape_model,
                                  update_slice=slices[0],
-                                 scale_estimate=initial_scale[1],
-                                 rotation=initial_rotation[1],
-                                 translation=initial_translation[1, [1, 0]])
+                                 scale_estimate=initial_scale[0],
+                                 rotation=initial_rotation[0],
+                                 translation=initial_translation[0, [1, 0]])
 
+fitted_shape_old = np.zeros_like(shape_model[0].reshape(-1, 2))
 inference.send(None)
 for i, s in enumerate(slices):
     for iteration in range(100):
         fitted_shape, closest_edge_points = inference.send(s)
 
-        output_image = 0.5 * (wings_image + edges[:, :, np.newaxis])
+        print((np.power(fitted_shape - fitted_shape_old, 2).sum(axis=1).mean()))
+        fitted_shape_old = fitted_shape
 
-        points = closest_edge_points[:, [1, 0]]
-        perimeter = draw.polygon_perimeter(points[:, 0], points[:, 1])
-        draw.set_color(output_image, (perimeter[0].astype(np.int), perimeter[1].astype(np.int)), [0, 1, 0])
-
-        points = fitted_shape[:, [1, 0]]
-        perimeter = draw.polygon_perimeter(points[:, 0], points[:, 1])
-        draw.set_color(output_image, (perimeter[0].astype(np.int), perimeter[1].astype(np.int)), [0, 0, 1])
-        if iteration % 20 == 0:
-            write_image('wings_template_{}.png'.format(iteration), output_image)
+        if iteration % 50 == 0:
+            output_image = visualize_result(wings_image, edges, fitted_shape, closest_edge_points)
+            write_image('wings_template_slice_{}_iteration_{}.png'.format(i, iteration), output_image)

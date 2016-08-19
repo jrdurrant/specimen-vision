@@ -3,6 +3,7 @@ from sklearn.neighbors import NearestNeighbors
 from skimage.transform import SimilarityTransform, estimate_transform, matrix_transform
 import matplotlib.pyplot as plt
 import scipy
+from skimage.filters import gaussian
 
 
 def plot_closest_points(image_points, edge_points, closest_edge_points):
@@ -69,15 +70,32 @@ def similarity(edge_image, mu, phi, sigma2, h, psi):
     return -closest_distances(image_points[:, 0], image_points[:, 1]).sum() / sigma2 + noise
 
 
+def gradient_step(gradient_y, gradient_x, magnitude, locations, step_size=5):
+    height, width = magnitude.shape
+    y = np.clip(locations[:, 1], 0, height - 1).astype(int)
+    x = np.clip(locations[:, 0], 0, width - 1).astype(int)
+
+    y_new = np.clip(locations[:, 1] - step_size * magnitude[y, x] * gradient_y[y, x], 0, height - 1)
+    x_new = np.clip(locations[:, 0] - step_size * magnitude[y, x] * gradient_x[y, x], 0, width - 1)
+    return np.stack((x_new, y_new), axis=1)
+
+
 def infer(edge_image, edge_lengths, mu, phi, sigma2,
           update_slice=slice(None),
           scale_estimate=None,
           rotation=0,
           translation=(0, 0)):
-    edge_points = np.array(np.where(edge_image)).T
-    edge_points[:, [0, 1]] = edge_points[:, [1, 0]]
-    edge_score = edge_image.shape[0] * np.exp(-edge_lengths[edge_image] / (0.25 * edge_image.shape[0])).reshape(-1, 1)
-    edge_points = np.concatenate((edge_points, edge_score), axis=1)
+    # edge_points = np.array(np.where(edge_image)).T
+    # edge_points[:, [0, 1]] = edge_points[:, [1, 0]]
+    # edge_score = edge_image.shape[0] * np.exp(-edge_lengths[edge_image] / (0.25 * edge_image.shape[0])).reshape(-1, 1)
+    # edge_points = np.concatenate((edge_points, edge_score), axis=1)
+    #
+    # edge_nn = NearestNeighbors(n_neighbors=1).fit(edge_points)
+
+    edge_near = scipy.ndimage.distance_transform_edt(~edge_image)
+    edge_near_blur = gaussian(edge_near, 2)
+    Gy, Gx = np.gradient(edge_near_blur)
+    mag = np.sqrt(np.power(Gy, 2) + np.power(Gx, 2))
 
     if scale_estimate is None:
         scale_estimate = min(edge_image.shape) * 4
@@ -85,8 +103,6 @@ def infer(edge_image, edge_lengths, mu, phi, sigma2,
     mu = (mu.reshape(-1, 2) - mu.reshape(-1, 2).mean(axis=0)).reshape(-1, 1)
     average_distance = np.sqrt(np.power(mu.reshape(-1, 2), 2).sum(axis=1)).mean()
     scale_estimate /= average_distance * np.sqrt(2)
-
-    edge_nn = NearestNeighbors(n_neighbors=1).fit(edge_points)
 
     h = np.zeros((phi.shape[1], 1))
 
@@ -97,8 +113,10 @@ def infer(edge_image, edge_lengths, mu, phi, sigma2,
         image_points = matrix_transform(w, psi.params)[update_slice, :]
         image_points = np.concatenate((image_points, np.zeros((image_points.shape[0], 1))), axis=1)
 
-        closest_edge_point_indices = edge_nn.kneighbors(image_points)[1].flatten()
-        closest_edge_points = edge_points[closest_edge_point_indices, :2]
+        # closest_edge_point_indices = edge_nn.kneighbors(image_points)[1].flatten()
+        # closest_edge_points = edge_points[closest_edge_point_indices, :2]
+
+        closest_edge_points = gradient_step(Gy, Gx, mag, image_points)
 
         w = mu.reshape(-1, 2)
         psi = estimate_transform('similarity', w[update_slice, :], closest_edge_points)
@@ -106,8 +124,10 @@ def infer(edge_image, edge_lengths, mu, phi, sigma2,
         image_points = matrix_transform(w, psi.params)[update_slice, :]
         image_points = np.concatenate((image_points, np.zeros((image_points.shape[0], 1))), axis=1)
 
-        closest_edge_point_indices = edge_nn.kneighbors(image_points)[1].flatten()
-        closest_edge_points = edge_points[closest_edge_point_indices, :2]
+        # closest_edge_point_indices = edge_nn.kneighbors(image_points)[1].flatten()
+        # closest_edge_points = edge_points[closest_edge_point_indices, :2]
+
+        closest_edge_points = gradient_step(Gy, Gx, mag, image_points)
 
         mu_slice = mu.reshape(-1, 2)[update_slice, :].reshape(-1, 1)
         K = phi.shape[-1]

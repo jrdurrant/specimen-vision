@@ -8,7 +8,7 @@ import numpy as np
 
 
 def read_image(filename, **kwargs):
-    return plt.imread(filename, **kwargs)
+    return plt.imread(filename, **kwargs)[:, :, :3]
 
 
 def write_image(filename, image, **kwargs):
